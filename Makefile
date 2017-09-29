@@ -4,7 +4,7 @@ LIB        = lib
 
 SRC        = src
 
-CFLAGS     = -std=c11 -c -Wall -Wextra -O1
+CFLAGS     = -std=c11 -c -Wall -Wextra -O1 -I$(SRC)
 LDFLAGS    = -Wall -L/usr/local/lib -L$(LIB)
 
 CC         = gcc
@@ -23,7 +23,7 @@ OBJS  := $(addprefix $(OBJ)/,$(notdir $(SRCS:%.c=%.o)))
 VPATH  = $(shell find $(SRC) -type d)
 
 .PHONY: default
-default: $(TARGET)
+default: run
 
 .PHONY: clean
 clean:
@@ -40,3 +40,8 @@ $(OBJS): $(OBJ)/%.o : %.c build_dirs
 .PHONY: build_dirs
 build_dirs:
 	@mkdir -p $(BIN) $(OBJ)
+
+.PHONY: run
+run: $(TARGET)
+	$(TARGET)
+

@@ -1,11 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
+
+#include "error.h"
+#include "osm_parse.h"
 
 int main() {
 
-	puts("hiya!");
-
-
+	struct context ctx;
+	int ret = parse_xml("../xmls/place.xml", &ctx);
+	printf("result: %s\n", error_get_message(ret));
 }
-
-
