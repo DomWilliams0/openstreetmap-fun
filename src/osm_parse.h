@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-typedef uint64_t id;
+typedef int64_t id;
 typedef uint32_t coord;
 
 struct node {
