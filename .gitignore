@@ -1,0 +1,8 @@
+*.o
+*.so
+*.a
+*.lib
+obj/
+bin/
+.ycm_extra_conf.py
+.exrc
