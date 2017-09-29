@@ -1,10 +1,10 @@
 OBJ        = obj
 BIN        = bin
 LIB        = lib
-
 SRC        = src
 
-CFLAGS     = -std=c11 -c -Wall -Wextra -O1 -I$(SRC)
+LIB_CFLAGS = -I$(LIB)/generic-c-hashmap
+CFLAGS     = -std=c11 -c -Wall -Wextra -O1 -I$(SRC) $(LIB_CFLAGS)
 LDFLAGS    = -Wall -L/usr/local/lib -L$(LIB)
 
 CC         = gcc
