@@ -6,8 +6,6 @@
 
 #include "osm_parse.h"
 
-const int LINE_PREFIX_LEN = 32;
-
 enum tag_type {
 	TAG_BOUNDS,
 	TAG_NODE,
@@ -83,7 +81,6 @@ int find_char(char *s, char c) {
 
 bool line_ends_with_close_tag(struct parse_ctx *ctx) {
 	int len = (int) (ctx->line_end - ctx->full_line);
-	printf("len is %d and n %lu\n", len, ctx->n);
 	char *line = ctx->full_line;
 
 	for (unsigned long i = len; i >= 1; i--)
@@ -120,7 +117,6 @@ int find_tag(char *line, char **tag_start) {
 
 int read_line(struct parse_ctx *ctx) {
 	while (true) {
-		printf("getline %ld\n", ctx->n);
 		int read = getline(&ctx->full_line, &ctx->n, ctx->f);
 
 		// possibly at the end too
