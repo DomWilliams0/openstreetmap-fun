@@ -16,7 +16,7 @@ enum tag_type {
 	TAG_UNKNOWN
 };
 
-struct tag {
+struct xml_tag {
 	enum tag_type type;
 	bool opening;
 };
@@ -28,8 +28,8 @@ const char *tag_lookup[] = {
 	"way",
 };
 
-struct tag parse_tag(char *tag_in) {
-	struct tag out = {
+struct xml_tag parse_tag(char *tag_in) {
+	struct xml_tag out = {
 		.type = TAG_UNKNOWN
 	};
 
@@ -277,13 +277,30 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 	return CRACKING;
 }
 
+ATTR_VISITOR(tag_visitor) {
+	switch(key[0]) {
+		case 'k':
+			((char **)data)[0] = val;
+			break;
+		case 'v':
+			((char **)data)[1] = val;
+			break;
+	}
+}
+
 int parse_tag_tag(struct parse_ctx *ctx) {
 	if (ctx->current_tag != TAG_NODE) {
 		printf("tag tag found inside non-node tag '%d'\n", ctx->current_tag);
 		return ERR_OSM;
 	}
-	// TODO parse key/val and put into map
-	printf("adding tag\n");
+
+	char *key_val[2] = {0};
+	visit_attributes(ctx->attr_start, tag_visitor, &key_val);
+	if (key_val[0] == NULL || key_val[1] == NULL) {
+		printf("bad tag\n");
+		return ERR_OSM;
+	}
+	// TODO actually use the tag
 	return CRACKING;
 }
 
@@ -299,7 +316,7 @@ int parse_xml(char *file_path, struct context *out) {
 		while (true) {
 			if (read_line(&ctx) != CRACKING) break;
 
-			struct tag tag = parse_tag(ctx.tag_start);
+			struct xml_tag tag = parse_tag(ctx.tag_start);
 
 			switch(tag.type) {
 				case TAG_BOUNDS:
