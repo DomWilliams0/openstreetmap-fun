@@ -5,6 +5,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <error.h>
+#include <math.h>
+#include <limits.h>
 
 #include "osm_parse.h"
 
@@ -13,7 +15,6 @@
 DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc);
 
 enum tag_type {
-	TAG_BOUNDS,
 	TAG_NODE,
 	TAG_TAG,
 	TAG_WAY,
@@ -26,7 +27,6 @@ struct xml_tag {
 };
 
 const char *tag_lookup[] = {
-	"bounds",
 	"node",
 	"tag",
 	"way",
@@ -57,7 +57,6 @@ struct xml_tag parse_tag(char *tag_in) {
 struct parse_ctx {
 	FILE *f;
 	struct context out;
-
 	size_t n;
 	char *full_line;
 	char *line_end;
@@ -69,6 +68,10 @@ struct parse_ctx {
 		struct node node;
 		struct way way;
 	} que;
+
+	double lat_range[2];
+	double lon_range[2];
+	// TODO put world size into context
 };
 
 int open_file(struct parse_ctx *ctx, char *file_path) {
@@ -183,7 +186,6 @@ void visit_attributes(char *line, attr_visitor *visitor, void *data) {
 
 int add_node_to_context(struct parse_ctx *ctx) {
 	struct node *node = &ctx->que.node;
-	printf("adding node id '%lu'\n", node->id);
 
 	HashMapPutResult res = node_mapPut(&ctx->out.nodes, &node, HMDR_REPLACE);
 	if (res == HMPR_FAILED)
@@ -194,45 +196,36 @@ int add_node_to_context(struct parse_ctx *ctx) {
 	return CRACKING;
 }
 
-ATTR_VISITOR(bounds_visitor) {
-	double dval = strtold(val, NULL);
-	int index = -1;
+void convert_to_pixels(double lat, double lon, coord *out) {
+	const int ZOOM = 23;
+	const double N = 1 << ZOOM;
+	const double PI = 3.14159265359;
+	const double RAD = PI / 180.0;
 
-	if (strcmp(key, "minlat") == 0)
-		index = 0;
-	else if (strcmp(key, "maxlat") == 0)
-		index = 1;
-	else if (strcmp(key, "minlon") == 0)
-		index = 2;
-	else if (strcmp(key, "maxlon") == 0)
-		index = 3;
-
-	if (index != -1)
-		((double *)data)[index] = dval;
+	double lat_rad = lat * RAD;
+	out[0] = (coord)((lon + 180.0) / 360.0 * N);
+	out[1] = (coord)((1.0 - log(tan(lat_rad) + (1.0 / cos(lat_rad))) / PI) / 2.0 * N);
 }
 
-int parse_bounds_tag(struct parse_ctx *ctx) {
+void make_coords_relative(struct parse_ctx *ctx) {
+	coord min[2];
+	coord max[2];
 
-	double lat_lon[4] = {0};
-	visit_attributes(ctx->attr_start, bounds_visitor, &lat_lon);
+	convert_to_pixels(ctx->lat_range[1], ctx->lon_range[0], min);
+	convert_to_pixels(ctx->lat_range[0], ctx->lon_range[1], max);
 
-	if (lat_lon[0] == 0 ||
-		lat_lon[1] == 0 ||
-		lat_lon[2] == 0 ||
-		lat_lon[3] == 0) {
-		printf("bad bounds\n");
-		return ERR_OSM;
-	}
-
-
-	printf("%.7lf\n", lat_lon[0]);
-	printf("%.7lf\n", lat_lon[1]);
-	printf("%.7lf\n", lat_lon[2]);
-	printf("%.7lf\n", lat_lon[3]);
-
-
-	return CRACKING;
+	struct node *node;
+	HASHMAP_FOR_EACH(node_map, node, ctx->out.nodes) {
+		node->pos[0] -= min[0];
+		node->pos[1] -= min[1];
+		printf("node %lu is now at %d, %d\n", node->id, node->pos[0], node->pos[1]);
+	} HASHMAP_FOR_EACH_END
 }
+
+struct node_lat {
+	id id;
+	double lon, lat;
+};
 
 ATTR_VISITOR(node_visitor) {
 
@@ -243,16 +236,15 @@ ATTR_VISITOR(node_visitor) {
 			printf("bad node id '%s'\n", val);
 			return;
 		}
-		printf("got an id '%ld'\n", long_id);
-		((struct node *)data)->id = long_id;
+		((struct node_lat *)data)->id = long_id;
 	}
 
 	else if (strcmp(key, "lat") == 0) {
-		((struct node *)data)->lat = strtold(val, NULL);;
+		((struct node_lat *)data)->lat = strtold(val, NULL);;
 	}
 
 	else if (strcmp(key, "lon") == 0) {
-		((struct node *)data)->lon = strtold(val, NULL);;
+		((struct node_lat *)data)->lon = strtold(val, NULL);;
 	}
 }
 
@@ -263,15 +255,27 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 	}
 
 	struct node *node = &ctx->que.node;
-	memset(node, '\0', sizeof(struct node));
-	visit_attributes(ctx->attr_start, node_visitor, node);
-	// TODO lon and lat converted to coords using bounds
+
+	struct node_lat node_lat = {0};
+	visit_attributes(ctx->attr_start, node_visitor, &node_lat);
+	node->id = node_lat.id;
+
+	const coord INVALID_COORD = UINT_MAX;
+	node->pos[0] = INVALID_COORD;
+	node->pos[1] = INVALID_COORD;
+
+	convert_to_pixels(node_lat.lat, node_lat.lon, node->pos);
 
 	// uh oh
-	if (node->id == 0 || node->lat == 0 || node->lon == 0) {
+	if (node->id == 0 || node->pos[0] == INVALID_COORD || node->pos[1] == INVALID_COORD) {
 		printf("bad node missing id/lat/lon\n");
 		return ERR_OSM;
 	}
+
+	ctx->lat_range[0] = fmin(ctx->lat_range[0], node_lat.lat);
+	ctx->lat_range[1] = fmax(ctx->lat_range[1], node_lat.lat);
+	ctx->lon_range[0] = fmin(ctx->lon_range[0], node_lat.lon);
+	ctx->lon_range[1] = fmax(ctx->lon_range[1], node_lat.lon);
 
 	// single line
 	if (line_ends_with_close_tag(ctx)) {
@@ -280,7 +284,6 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 	} else {
 		// has more lines, dont store yet
 		ctx->current_tag = TAG_NODE;
-		puts("oho carrying on");
 	}
 
 	return CRACKING;
@@ -328,11 +331,6 @@ int parse_xml(char *file_path, struct context *out) {
 			struct xml_tag tag = parse_tag(ctx.tag_start);
 
 			switch(tag.type) {
-				case TAG_BOUNDS:
-					if ((ret = parse_bounds_tag(&ctx)) != CRACKING)
-						goto end_scan;
-
-					break;
 				case TAG_NODE:
 					if ((ret = parse_node_tag(&ctx, tag.opening)) != CRACKING)
 						printf("error processing node: %s\n", error_get_message(ret));
@@ -348,11 +346,12 @@ int parse_xml(char *file_path, struct context *out) {
 			}
 
 		}
-end_scan:
 
 		fclose(ctx.f);
 		ctx.f = NULL;
 	}
+
+	make_coords_relative(&ctx);
 
 
 	*out = ctx.out;

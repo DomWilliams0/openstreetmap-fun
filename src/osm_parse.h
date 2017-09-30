@@ -11,9 +11,7 @@ DEFINE_HASHMAP(node_map, struct node);
 
 struct node {
 	id id;
-	// coord pos[2];
-	double lat, lon;
-	// TODO convert to coordinates
+	coord pos[2];
 };
 
 struct way {
