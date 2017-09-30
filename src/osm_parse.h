@@ -8,7 +8,9 @@ typedef uint32_t coord;
 
 struct node {
 	id id;
-	coord pos[2];
+	// coord pos[2];
+	double lat, lon;
+	// TODO convert to coordinates
 };
 
 struct way {

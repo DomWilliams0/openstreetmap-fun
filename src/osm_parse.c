@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <strings.h>
+#include <string.h>
+#include <ctype.h>
 #include <error.h>
 
 #include "osm_parse.h"
@@ -55,6 +57,7 @@ struct parse_ctx {
 	char *full_line;
 	char *line_end;
 	char *tag_start;
+	char *attr_start;
 
 	enum tag_type current_tag;
 	union {
@@ -125,30 +128,52 @@ int read_line(struct parse_ctx *ctx) {
 			ctx->full_line = NULL;
 			ctx->line_end = NULL;
 			ctx->tag_start = NULL;
+			ctx->attr_start = NULL;
 			return ERR_IO;
 		}
 
 		ctx->line_end = ctx->full_line + strlen(ctx->full_line);
 
-		if (find_tag(ctx->full_line, &ctx->tag_start) == CRACKING)
+		if (find_tag(ctx->full_line, &ctx->tag_start) == CRACKING) {
+			ctx->attr_start = ctx->tag_start + strlen(ctx->tag_start) + 1;
 			return CRACKING;
+		}
 	}
 
 	return ERR_IO; // never gonna get here
 }
 
-char *parse_attribute(char *line, const char *key) {
-	char *str = strstr(line, key);
-	if (str == NULL)
-		return "";
+typedef void attr_visitor(char *key, char *val, void *data);
+#define ATTR_VISITOR(name) void name(char *key, char *val, void *data)
 
-	char *start = str + strlen(key) + 2; // ="
-	int len = find_char(start, '"');
-	if (len < 0)
-		return "";
+void visit_attributes(char *line, attr_visitor *visitor, void *data) {
+	while (true) {
+		// assume attribute starts at the front
+		char *key_start = line;
 
-	start[len] = '\0';
-	return start;
+		// find equals
+		char *eq = index(key_start, '=');
+		if (eq == NULL)
+			return;
+
+		// split on equals
+		*eq = '\0';
+		char *val_start = eq + 2; // ="
+		char *val_end = index(val_start, '"');
+		if (val_end == NULL)
+			return;
+
+		*val_end = '\0';
+
+		// wahey!
+		visitor(key_start, val_start, data);
+		// TODO allow early termination
+
+		// move on
+		line = val_end + 1;
+		while (*line && isblank(*line))
+			line++;
+	}
 }
 
 void add_node_to_context(struct parse_ctx *ctx) {
@@ -159,6 +184,68 @@ void add_node_to_context(struct parse_ctx *ctx) {
 	ctx->current_tag = TAG_UNKNOWN;
 }
 
+ATTR_VISITOR(bounds_visitor) {
+	double dval = strtold(val, NULL);
+	int index = -1;
+
+	if (strcmp(key, "minlat") == 0)
+		index = 0;
+	else if (strcmp(key, "maxlat") == 0)
+		index = 1;
+	else if (strcmp(key, "minlon") == 0)
+		index = 2;
+	else if (strcmp(key, "maxlon") == 0)
+		index = 3;
+
+	if (index != -1)
+		((double *)data)[index] = dval;
+}
+
+int parse_bounds_tag(struct parse_ctx *ctx) {
+
+	double lat_lon[4] = {0};
+	visit_attributes(ctx->attr_start, bounds_visitor, &lat_lon);
+
+	if (lat_lon[0] == 0 ||
+		lat_lon[1] == 0 ||
+		lat_lon[2] == 0 ||
+		lat_lon[3] == 0) {
+		printf("bad bounds\n");
+		return ERR_OSM;
+	}
+
+
+	printf("%.7lf\n", lat_lon[0]);
+	printf("%.7lf\n", lat_lon[1]);
+	printf("%.7lf\n", lat_lon[2]);
+	printf("%.7lf\n", lat_lon[3]);
+
+
+	return CRACKING;
+}
+
+ATTR_VISITOR(node_visitor) {
+
+	if (strcmp(key, "id") == 0) {
+		char *str_end;
+		long long_id = strtol(val, &str_end, 10);
+		if (*str_end != '\0') {
+			printf("bad node id '%s'\n", val);
+			return;
+		}
+		printf("got an id '%ld'\n", long_id);
+		((struct node *)data)->id = long_id;
+	}
+
+	else if (strcmp(key, "lat") == 0) {
+		((struct node *)data)->lat = strtold(val, NULL);;
+	}
+
+	else if (strcmp(key, "lon") == 0) {
+		((struct node *)data)->lon = strtold(val, NULL);;
+	}
+}
+
 int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 	// closing
 	if (!opening) {
@@ -166,19 +253,16 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 		return CRACKING;
 	}
 
-	char *line = ctx->tag_start + strlen(ctx->tag_start) + 1;
+	struct node *node = &ctx->que.node;
+	memset(node, '\0', sizeof(struct node));
+	visit_attributes(ctx->attr_start, node_visitor, node);
+	// TODO lon and lat converted to coords using bounds
 
-	// extract id
-	char *str_id = parse_attribute(line, "id");
-	char *str_end;
-	long long_id = strtol(str_id, &str_end, 10);
-	if (*str_end != '\0') {
-		printf("bad node id '%s'\n", str_id);
+	// uh oh
+	if (node->id == 0 || node->lat == 0 || node->lon == 0) {
+		printf("bad node missing id/lat/lon\n");
 		return ERR_OSM;
 	}
-	ctx->que.node.id = long_id;
-
-	// TODO lon and lat converted to coords using bounds
 
 	// single line
 	if (line_ends_with_close_tag(ctx)) {
@@ -213,29 +297,31 @@ int parse_xml(char *file_path, struct context *out) {
 	if ((ret = open_file(&ctx, file_path)) == CRACKING) {
 
 		while (true) {
-			int ret = read_line(&ctx);
-			if (ret != CRACKING) break;
+			if (read_line(&ctx) != CRACKING) break;
 
 			struct tag tag = parse_tag(ctx.tag_start);
 
 			switch(tag.type) {
+				case TAG_BOUNDS:
+					if (parse_bounds_tag(&ctx) != CRACKING)
+						goto end_scan;
+
+					break;
 				case TAG_NODE:
-					ret = parse_node_tag(&ctx, tag.opening);
+					parse_node_tag(&ctx, tag.opening);
 					break;
 
 				case TAG_TAG:
-					ret = parse_tag_tag(&ctx);
+					parse_tag_tag(&ctx);
 					break;
 
 				default:
 					continue;
 
 			}
-			// TODO how use return codes?
-
-			// do something
 
 		}
+end_scan:
 
 		fclose(ctx.f);
 		ctx.f = NULL;
