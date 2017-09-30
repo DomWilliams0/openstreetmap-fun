@@ -5,7 +5,8 @@
 
 #define ERR_FILE_NOT_FOUND (0x1000)
 #define ERR_IO             (0x1001)
-#define ERR_OSM            (0x1002)
+#define ERR_MEM            (0x1002)
+#define ERR_OSM            (0x1003)
 
 const char *error_get_message(int err);
 

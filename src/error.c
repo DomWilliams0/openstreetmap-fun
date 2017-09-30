@@ -10,6 +10,8 @@ const char *error_get_message(int err)
 			return "File not found";
 		case ERR_IO:
 			return "IO error";
+		case ERR_MEM:
+			return "Memory error";
 		case ERR_OSM:
 			return "OSM format error";
 		default:

@@ -8,6 +8,10 @@
 
 #include "osm_parse.h"
 
+#define NODE_CMP(left, right) left->id == right->id
+#define NODE_HASH(entry) entry->id
+DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc);
+
 enum tag_type {
 	TAG_BOUNDS,
 	TAG_NODE,
@@ -52,6 +56,7 @@ struct xml_tag parse_tag(char *tag_in) {
 
 struct parse_ctx {
 	FILE *f;
+	struct context out;
 
 	size_t n;
 	char *full_line;
@@ -176,12 +181,17 @@ void visit_attributes(char *line, attr_visitor *visitor, void *data) {
 	}
 }
 
-void add_node_to_context(struct parse_ctx *ctx) {
+int add_node_to_context(struct parse_ctx *ctx) {
 	struct node *node = &ctx->que.node;
 	printf("adding node id '%lu'\n", node->id);
-	// TODO actually add to context list and realloc if necessary
 
+	HashMapPutResult res = node_mapPut(&ctx->out.nodes, &node, HMDR_REPLACE);
+	if (res == HMPR_FAILED)
+		return ERR_MEM;
+
+	// unset current
 	ctx->current_tag = TAG_UNKNOWN;
+	return CRACKING;
 }
 
 ATTR_VISITOR(bounds_visitor) {
@@ -249,8 +259,7 @@ ATTR_VISITOR(node_visitor) {
 int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 	// closing
 	if (!opening) {
-		add_node_to_context(ctx);
-		return CRACKING;
+		return add_node_to_context(ctx);
 	}
 
 	struct node *node = &ctx->que.node;
@@ -266,7 +275,7 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 
 	// single line
 	if (line_ends_with_close_tag(ctx)) {
-		add_node_to_context(ctx);
+		return add_node_to_context(ctx);
 
 	} else {
 		// has more lines, dont store yet
@@ -320,12 +329,13 @@ int parse_xml(char *file_path, struct context *out) {
 
 			switch(tag.type) {
 				case TAG_BOUNDS:
-					if (parse_bounds_tag(&ctx) != CRACKING)
+					if ((ret = parse_bounds_tag(&ctx)) != CRACKING)
 						goto end_scan;
 
 					break;
 				case TAG_NODE:
-					parse_node_tag(&ctx, tag.opening);
+					if ((ret = parse_node_tag(&ctx, tag.opening)) != CRACKING)
+						printf("error processing node: %s\n", error_get_message(ret));
 					break;
 
 				case TAG_TAG:
@@ -345,5 +355,10 @@ end_scan:
 	}
 
 
+	*out = ctx.out;
 	return ret;
+}
+
+void free_context(struct context *ctx) {
+	node_mapDestroy(&ctx->nodes);
 }
