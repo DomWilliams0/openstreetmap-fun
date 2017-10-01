@@ -24,6 +24,8 @@ enum tag_type {
 	TAG_NODE,
 	TAG_TAG,
 	TAG_WAY,
+	TAG_NODE_REF,
+	TAG_RELATION,
 	TAG_UNKNOWN
 };
 
@@ -36,6 +38,8 @@ const char *tag_lookup[] = {
 	"node",
 	"tag",
 	"way",
+	"nd",
+	"relation",
 };
 
 struct xml_tag parse_tag(char *tag_in) {
@@ -234,16 +238,22 @@ struct node_lat {
 	double lon, lat;
 };
 
+bool id_to_long(char *s, long *out) {
+	char *str_end;
+	long long_id = strtol(s, &str_end, 10);
+	if (*str_end != '\0')
+		return false;
+	*out = long_id;
+	return true;
+}
+
 ATTR_VISITOR(node_visitor) {
 
 	if (strcmp(key, "id") == 0) {
-		char *str_end;
-		long long_id = strtol(val, &str_end, 10);
-		if (*str_end != '\0') {
+		if (!id_to_long(val, &((struct node_lat *)data)->id)) {
 			printf("bad node id '%s'\n", val);
 			return;
 		}
-		((struct node_lat *)data)->id = long_id;
 	}
 
 	else if (strcmp(key, "lat") == 0) {
@@ -307,9 +317,81 @@ ATTR_VISITOR(tag_visitor) {
 	}
 }
 
+ATTR_VISITOR(node_ref_visitor) {
+	if (strcmp(key, "ref") == 0) {
+		long id;
+		if (!id_to_long(val, (long *)data)) {
+			printf("bad node ref id '%s'\n", val);
+			return;
+		}
+
+	}
+}
+int parse_node_ref_tag(struct parse_ctx *ctx, bool opening) {
+	if (ctx->current_tag != TAG_WAY) {
+		printf("nd tag found inside non-way tag '%s'\n", tag_lookup[ctx->current_tag]);
+		return ERR_OSM;
+	}
+
+	long id = 0;
+	visit_attributes(ctx->attr_start, node_ref_visitor, &id);
+
+	if (id == 0)
+		return ERR_OSM;
+
+	// TODO add to list of current way!
+
+}
+
+ATTR_VISITOR(way_visitor) {
+
+	if (strcmp(key, "id") == 0) {
+		if (!id_to_long(val, &((struct way *)data)->id)) {
+			printf("bad way id '%s'\n", val);
+			return;
+		}
+	}
+}
+int add_way_to_context(struct parse_ctx *ctx) {
+	struct way *way = &ctx->que.way;
+
+	LOG("adding way '%lu'\n", way->id);
+
+	// TODO add to list
+
+	// unset current
+	ctx->current_tag = TAG_UNKNOWN;
+	return CRACKING;
+}
+
+
+int parse_way_tag(struct parse_ctx *ctx, bool opening) {
+	// closing
+	if (!opening) {
+		return add_way_to_context(ctx);
+	}
+
+	struct way *way = &ctx->que.way;
+
+	visit_attributes(ctx->attr_start, way_visitor, way);
+	// TODO init list of nodes
+
+
+	// single line
+	if (line_ends_with_close_tag(ctx)) {
+		return add_way_to_context(ctx);
+
+	} else {
+		// has more lines, dont store yet
+		ctx->current_tag = TAG_NODE;
+	}
+
+	return CRACKING;
+}
+
 int parse_tag_tag(struct parse_ctx *ctx) {
-	if (ctx->current_tag != TAG_NODE) {
-		printf("tag tag found inside non-node tag '%d'\n", ctx->current_tag);
+	if (ctx->current_tag != TAG_NODE && ctx->current_tag != TAG_WAY) {
+		printf("tag tag found inside non-node or way tag '%s'\n", tag_lookup[ctx->current_tag]);
 		return ERR_OSM;
 	}
 
@@ -342,6 +424,14 @@ int parse_xml(char *file_path, struct context *out) {
 					if ((ret = parse_node_tag(&ctx, tag.opening)) != CRACKING)
 						printf("error processing node: %s\n", error_get_message(ret));
 					break;
+
+				case TAG_WAY:
+					if ((ret = parse_way_tag(&ctx, tag.opening)) != CRACKING)
+						printf("error processing way: %s\n", error_get_message(ret));
+					break;
+
+				case TAG_NODE_REF:
+					parse_node_ref_tag(&ctx, tag.opening);
 
 				case TAG_TAG:
 					parse_tag_tag(&ctx);
