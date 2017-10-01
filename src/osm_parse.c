@@ -10,6 +10,12 @@
 
 #include "osm_parse.h"
 
+#ifdef DEBUG
+#define LOG printf
+#else
+#define LOG //
+#endif
+
 #define NODE_CMP(left, right) left->id == right->id
 #define NODE_HASH(entry) entry->id
 DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc);
@@ -187,6 +193,8 @@ void visit_attributes(char *line, attr_visitor *visitor, void *data) {
 int add_node_to_context(struct parse_ctx *ctx) {
 	struct node *node = &ctx->que.node;
 
+	LOG("adding node '%lu'\n", node->id);
+
 	HashMapPutResult res = node_mapPut(&ctx->out.nodes, &node, HMDR_REPLACE);
 	if (res == HMPR_FAILED)
 		return ERR_MEM;
@@ -218,7 +226,6 @@ void make_coords_relative(struct parse_ctx *ctx) {
 	HASHMAP_FOR_EACH(node_map, node, ctx->out.nodes) {
 		node->pos[0] -= min[0];
 		node->pos[1] -= min[1];
-		printf("node %lu is now at %d, %d\n", node->id, node->pos[0], node->pos[1]);
 	} HASHMAP_FOR_EACH_END
 }
 
