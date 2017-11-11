@@ -230,16 +230,32 @@ void convert_to_pixels(double lat, double lon, point *out) {
 }
 
 void make_coords_relative(struct parse_ctx *ctx) {
-	point min, max;
+	point min = {
+		.x = UINT_MAX,
+		.y = UINT_MAX,
+	};
+	point max = {
+		.x = 0,
+		.y = 0,
+	};
 
-	convert_to_pixels(ctx->lat_range[1], ctx->lon_range[0], &min);
-	convert_to_pixels(ctx->lat_range[0], ctx->lon_range[1], &max);
-
+	// find bounds
 	struct node *node = NULL;
+	HASHMAP_FOR_EACH(node_map, node, ctx->nodes) {
+		min.x = fmin(min.x, node->pos.x);
+		min.y = fmin(min.y, node->pos.y);
+		max.x = fmax(max.x, node->pos.x);
+		max.y = fmax(max.y, node->pos.y);
+	} HASHMAP_FOR_EACH_END
+
+	// make all points relative
 	HASHMAP_FOR_EACH(node_map, node, ctx->nodes) {
 		node->pos.x -= min.x;
 		node->pos.y -= min.y;
 	} HASHMAP_FOR_EACH_END
+
+	ctx->out.bounds[0] = max.x - min.x;
+	ctx->out.bounds[1] = max.y - min.y;
 }
 
 struct node_lat {
@@ -297,12 +313,6 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 		printf("bad node missing id/lat/lon\n");
 		return ERR_OSM;
 	}
-
-	// TODO could move this operation to the end to make the most of cache?
-	ctx->lat_range[0] = fmin(ctx->lat_range[0], node_lat.lat);
-	ctx->lat_range[1] = fmax(ctx->lat_range[1], node_lat.lat);
-	ctx->lon_range[0] = fmin(ctx->lon_range[0], node_lat.lon);
-	ctx->lon_range[1] = fmax(ctx->lon_range[1], node_lat.lon);
 
 	// single line
 	if (line_ends_with_close_tag(ctx)) {
