@@ -3,7 +3,7 @@ BIN        = bin
 LIB        = lib
 SRC        = src
 
-LIB_CFLAGS = -I$(LIB)/generic-c-hashmap
+LIB_CFLAGS = -I$(LIB)/generic-c-hashmap -I$(LIB)/vec/src
 CFLAGS     = -std=c11 -c -Wall -Wextra -O1 -I$(SRC) $(LIB_CFLAGS)
 LDFLAGS    = -Wall -L/usr/local/lib -L$(LIB) -lm
 
@@ -15,12 +15,15 @@ ifeq ($(RELEASE), 0)
 	CFLAGS += -DDEBUG -O0 -g
 endif
 
-SRCS  := $(shell find $(SRC) -type f -name '*.c')
-INCS  := $(shell find $(SRC) -type f -name '*.h')
+SRCS     := $(shell find $(SRC) -type f -name '*.c')
+INCS     := $(shell find $(SRC) -type f -name '*.h')
+
+LIB_SRCS := lib/vec/src/vec.c
+SRCS     := $(SRCS) $(LIB_SRCS)
 
 OBJS  := $(addprefix $(OBJ)/,$(notdir $(SRCS:%.c=%.o)))
 
-VPATH  = $(shell find $(SRC) -type d)
+VPATH  = $(shell find $(SRC) $(LIB) -type d)
 
 .PHONY: default
 default: run

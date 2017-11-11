@@ -1,3 +1,6 @@
 [submodule "lib/generic-c-hashmap"]
 	path = lib/generic-c-hashmap
 	url = https://github.com/Kijewski/generic-c-hashmap
+[submodule "lib/vec"]
+	path = lib/vec
+	url = https://github.com/rxi/vec

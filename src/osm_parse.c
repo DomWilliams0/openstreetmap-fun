@@ -19,6 +19,7 @@
 #define NODE_CMP(left, right) left->id == right->id
 #define NODE_HASH(entry) entry->id
 DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc);
+DECLARE_HASHMAP(way_map, NODE_CMP, NODE_HASH, free, realloc);
 
 enum tag_type {
 	TAG_NODE,
@@ -197,14 +198,14 @@ void visit_attributes(char *line, attr_visitor *visitor, void *data) {
 int add_node_to_context(struct parse_ctx *ctx) {
 	struct node *node = &ctx->que.node;
 
-	LOG("adding node '%lu'\n", node->id);
+	// unset current
+	ctx->current_tag = TAG_UNKNOWN;
 
+	LOG("adding node '%lu'\n", node->id);
 	HashMapPutResult res = node_mapPut(&ctx->out.nodes, &node, HMDR_REPLACE);
 	if (res == HMPR_FAILED)
 		return ERR_MEM;
 
-	// unset current
-	ctx->current_tag = TAG_UNKNOWN;
 	return CRACKING;
 }
 
@@ -289,6 +290,7 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 		return ERR_OSM;
 	}
 
+	// TODO could move this operation to the end to make the most of cache?
 	ctx->lat_range[0] = fmin(ctx->lat_range[0], node_lat.lat);
 	ctx->lat_range[1] = fmax(ctx->lat_range[1], node_lat.lat);
 	ctx->lon_range[0] = fmin(ctx->lon_range[0], node_lat.lon);
@@ -319,28 +321,28 @@ ATTR_VISITOR(tag_visitor) {
 
 ATTR_VISITOR(node_ref_visitor) {
 	if (strcmp(key, "ref") == 0) {
-		long id;
-		if (!id_to_long(val, (long *)data)) {
+		if (!id_to_long(val, (id *)data)) {
 			printf("bad node ref id '%s'\n", val);
 			return;
 		}
 
 	}
 }
-int parse_node_ref_tag(struct parse_ctx *ctx, bool opening) {
+int parse_node_ref_tag(struct parse_ctx *ctx) {
 	if (ctx->current_tag != TAG_WAY) {
 		printf("nd tag found inside non-way tag '%s'\n", tag_lookup[ctx->current_tag]);
 		return ERR_OSM;
 	}
 
-	long id = 0;
+	id id = 0;
 	visit_attributes(ctx->attr_start, node_ref_visitor, &id);
 
 	if (id == 0)
 		return ERR_OSM;
 
-	// TODO add to list of current way!
 
+	struct way *way = &ctx->que.way;
+	return vec_push(&way->nodes, id) == 0 ? CRACKING : ERR_MEM;
 }
 
 ATTR_VISITOR(way_visitor) {
@@ -355,12 +357,14 @@ ATTR_VISITOR(way_visitor) {
 int add_way_to_context(struct parse_ctx *ctx) {
 	struct way *way = &ctx->que.way;
 
-	LOG("adding way '%lu'\n", way->id);
-
-	// TODO add to list
-
 	// unset current
 	ctx->current_tag = TAG_UNKNOWN;
+
+	LOG("adding way '%lu'\n", way->id);
+	HashMapPutResult res = way_mapPut(&ctx->out.ways, &way, HMDR_REPLACE);
+	if (res == HMPR_FAILED)
+		return ERR_MEM;
+
 	return CRACKING;
 }
 
@@ -374,8 +378,7 @@ int parse_way_tag(struct parse_ctx *ctx, bool opening) {
 	struct way *way = &ctx->que.way;
 
 	visit_attributes(ctx->attr_start, way_visitor, way);
-	// TODO init list of nodes
-
+	vec_init(&way->nodes);
 
 	// single line
 	if (line_ends_with_close_tag(ctx)) {
@@ -383,7 +386,7 @@ int parse_way_tag(struct parse_ctx *ctx, bool opening) {
 
 	} else {
 		// has more lines, dont store yet
-		ctx->current_tag = TAG_NODE;
+		ctx->current_tag = TAG_WAY;
 	}
 
 	return CRACKING;
@@ -431,7 +434,8 @@ int parse_xml(char *file_path, struct context *out) {
 					break;
 
 				case TAG_NODE_REF:
-					parse_node_ref_tag(&ctx, tag.opening);
+					parse_node_ref_tag(&ctx);
+					break;
 
 				case TAG_TAG:
 					parse_tag_tag(&ctx);
@@ -446,15 +450,27 @@ int parse_xml(char *file_path, struct context *out) {
 
 		fclose(ctx.f);
 		ctx.f = NULL;
+
+		make_coords_relative(&ctx);
+
+		struct way *w;
+		HASHMAP_FOR_EACH(way_map, w, ctx.out.ways) {
+			printf("way %lu has %d\n", w->id,  w->nodes.length);
+		} HASHMAP_FOR_EACH_END
+
+		*out = ctx.out;
 	}
 
-	make_coords_relative(&ctx);
-
-
-	*out = ctx.out;
 	return ret;
 }
 
 void free_context(struct context *ctx) {
 	node_mapDestroy(&ctx->nodes);
+
+	struct way *way;
+	HASHMAP_FOR_EACH(way_map, way, ctx->ways) {
+		vec_deinit(&way->nodes);
+	} HASHMAP_FOR_EACH_END
+
+	way_mapDestroy(&ctx->ways);
 }

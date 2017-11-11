@@ -3,11 +3,14 @@
 
 #include <stdint.h>
 #include "hashmap.h"
+#include "vec.h"
 
 typedef int64_t id;
 typedef uint32_t coord;
 
 DEFINE_HASHMAP(node_map, struct node);
+DEFINE_HASHMAP(way_map, struct way);
+typedef vec_t(id) vec_id_t;
 
 struct node {
 	id id;
@@ -16,12 +19,12 @@ struct node {
 
 struct way {
 	id id;
-	struct node *nodes;
+	vec_id_t nodes;
 };
 
 struct context {
 	node_map nodes;
-	struct way *ways;
+	way_map ways;
 	coord bounds[2];
 };
 
