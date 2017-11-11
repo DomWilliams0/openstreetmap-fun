@@ -209,28 +209,27 @@ int add_node_to_context(struct parse_ctx *ctx) {
 	return CRACKING;
 }
 
-void convert_to_pixels(double lat, double lon, coord *out) {
+void convert_to_pixels(double lat, double lon, point *out) {
 	const int ZOOM = 23;
 	const double N = 1 << ZOOM;
 	const double PI = 3.14159265359;
 	const double RAD = PI / 180.0;
 
 	double lat_rad = lat * RAD;
-	out[0] = (coord)((lon + 180.0) / 360.0 * N);
-	out[1] = (coord)((1.0 - log(tan(lat_rad) + (1.0 / cos(lat_rad))) / PI) / 2.0 * N);
+	out->x = (coord)((lon + 180.0) / 360.0 * N);
+	out->y = (coord)((1.0 - log(tan(lat_rad) + (1.0 / cos(lat_rad))) / PI) / 2.0 * N);
 }
 
 void make_coords_relative(struct parse_ctx *ctx) {
-	coord min[2];
-	coord max[2];
+	point min, max;
 
-	convert_to_pixels(ctx->lat_range[1], ctx->lon_range[0], min);
-	convert_to_pixels(ctx->lat_range[0], ctx->lon_range[1], max);
+	convert_to_pixels(ctx->lat_range[1], ctx->lon_range[0], &min);
+	convert_to_pixels(ctx->lat_range[0], ctx->lon_range[1], &max);
 
 	struct node *node;
 	HASHMAP_FOR_EACH(node_map, node, ctx->out.nodes) {
-		node->pos[0] -= min[0];
-		node->pos[1] -= min[1];
+		node->pos.x -= min.x;
+		node->pos.y -= min.y;
 	} HASHMAP_FOR_EACH_END
 }
 
@@ -279,13 +278,13 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 	node->id = node_lat.id;
 
 	const coord INVALID_COORD = UINT_MAX;
-	node->pos[0] = INVALID_COORD;
-	node->pos[1] = INVALID_COORD;
+	node->pos.x = INVALID_COORD;
+	node->pos.y = INVALID_COORD;
 
-	convert_to_pixels(node_lat.lat, node_lat.lon, node->pos);
+	convert_to_pixels(node_lat.lat, node_lat.lon, &node->pos);
 
 	// uh oh
-	if (node->id == 0 || node->pos[0] == INVALID_COORD || node->pos[1] == INVALID_COORD) {
+	if (node->id == 0 || node->pos.x == INVALID_COORD || node->pos.y == INVALID_COORD) {
 		printf("bad node missing id/lat/lon\n");
 		return ERR_OSM;
 	}
