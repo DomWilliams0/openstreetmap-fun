@@ -16,7 +16,7 @@
 #define LOG //
 #endif
 
-#define NODE_CMP(left, right) left->id == right->id
+#define NODE_CMP(left, right) left->id != right->id
 #define NODE_HASH(entry) entry->id
 DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc);
 DECLARE_HASHMAP(way_map, NODE_CMP, NODE_HASH, free, realloc);
@@ -361,7 +361,8 @@ int add_way_to_context(struct parse_ctx *ctx) {
 	ctx->current_tag = TAG_UNKNOWN;
 
 	LOG("adding way '%lu'\n", way->id);
-	HashMapPutResult res = way_mapPut(&ctx->out.ways, &way, HMDR_REPLACE);
+
+	HashMapPutResult res = way_mapPut(&ctx->out.ways, &way, HMDR_FAIL);
 	if (res == HMPR_FAILED)
 		return ERR_MEM;
 
@@ -434,7 +435,8 @@ int parse_xml(char *file_path, struct context *out) {
 					break;
 
 				case TAG_NODE_REF:
-					parse_node_ref_tag(&ctx);
+					if ((ret = parse_node_ref_tag(&ctx)) != CRACKING)
+						printf("error processing node ref: %s\n", error_get_message(ret));
 					break;
 
 				case TAG_TAG:
