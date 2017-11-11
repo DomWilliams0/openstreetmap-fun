@@ -4,7 +4,7 @@ LIB        = lib
 SRC        = src
 
 LIB_CFLAGS = -I$(LIB)/generic-c-hashmap -I$(LIB)/vec/src
-CFLAGS     = -std=c11 -c -Wall -Wextra -O1 -I$(SRC) $(LIB_CFLAGS) -D_GNU_SOURCE
+CFLAGS     = -std=c11 -c -Wall -Wextra -Wpedantic -O1 -I$(SRC) $(LIB_CFLAGS) -D_GNU_SOURCE
 LDFLAGS    = -Wall -L/usr/local/lib -L$(LIB) -lm
 
 CC         = gcc

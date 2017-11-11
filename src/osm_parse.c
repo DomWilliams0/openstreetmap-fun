@@ -16,8 +16,8 @@
 #define LOG //
 #endif
 
-DEFINE_HASHMAP(node_map, struct node);
-DEFINE_HASHMAP(way_map, struct way);
+DEFINE_HASHMAP(node_map, struct node)
+DEFINE_HASHMAP(way_map, struct way)
 
 typedef int64_t id;
 typedef vec_t(id) vec_id_t;
@@ -34,8 +34,8 @@ struct way {
 
 #define NODE_CMP(left, right) left->id != right->id
 #define NODE_HASH(entry) entry->id
-DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc);
-DECLARE_HASHMAP(way_map, NODE_CMP, NODE_HASH, free, realloc);
+DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc)
+DECLARE_HASHMAP(way_map, NODE_CMP, NODE_HASH, free, realloc)
 
 enum tag_type {
 	TAG_NODE,
