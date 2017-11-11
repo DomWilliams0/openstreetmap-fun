@@ -1,6 +1,32 @@
 syntax = "proto3";
 
-message Hiya {
-	string str = 1;
-	int32 num = 2;
+message World {
+	uint32 bounds_x = 1;
+	uint32 bounds_y = 2;
+	repeated Road roads = 3;
+	repeated Building buildings = 4;
+}
+
+message Point {
+	uint32 x = 1;
+	uint32 y = 2;
+}
+
+enum RoadType {
+	UNKNOWN = 0;
+	MOTORWAY = 1;
+	PRIMARY = 2;
+	SECONDARY = 3;
+	MINOR = 4;
+	PEDESTRIAN = 5;
+}
+
+message Road {
+	RoadType type = 1;
+	string name = 2;
+	repeated Point segments = 3;
+}
+
+message Building {
+	repeated Point points = 1;;
 }
