@@ -455,7 +455,7 @@ int parse_xml(char *file_path, struct context *out) {
 
 		struct way *w;
 		HASHMAP_FOR_EACH(way_map, w, ctx.out.ways) {
-			printf("way %lu has %d\n", w->id,  w->nodes.length);
+			LOG("way %lu has %d\n", w->id,  w->nodes.length);
 		} HASHMAP_FOR_EACH_END
 
 		*out = ctx.out;
