@@ -378,6 +378,22 @@ int add_way_to_context(struct parse_ctx *ctx) {
 
 	if (way->way_type == WAY_ROAD) {
 		LOG("adding road '%lu'\n", way->id);
+
+		// add road segments
+		int i = 0;
+		id nid = 0;
+		struct node node = {0};
+		struct node *pnode = &node;
+		vec_foreach(&way->nodes, nid, i) {
+			node.id = nid;
+			if (!node_mapFind(&ctx->nodes, &pnode)) {
+				printf("nonexistent node ref %ld\n", nid);
+				return ERR_OSM;
+			}
+			if (vec_push(&way->que.road.segments, node.pos) != 0)
+				return ERR_MEM;
+		}
+
 		ret = vec_push(&ctx->out.roads, way->que.road) == 0 ? CRACKING : ERR_MEM;
 	}
 

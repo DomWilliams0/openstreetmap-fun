@@ -15,6 +15,8 @@ void free_world(struct world *world) {
 	vec_foreach(&world->roads, r, i) {
 		if (r.name != NULL)
 			free(r.name);
+		if (r.segments.data != NULL)
+			vec_deinit(&r.segments);
 	}
 
 	if (world->roads.data != NULL)
