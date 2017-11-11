@@ -410,24 +410,63 @@ ATTR_VISITOR(way_visitor) {
 	}
 }
 
-int add_way_to_context(struct parse_ctx *ctx) {
+static enum way_type classify_way(struct parse_ctx *ctx) {
 	struct way *way = &ctx->que.way;
-	int ret = CRACKING;
 	struct tag tag = {0};
 	struct tag *ptag = &tag;
 
-	// classification
 	tag.key = "highway";
 	if (tag_mapFind(&ctx->current_tags, &ptag)) {
 		enum road_type rt = parse_road_type(ptag->val);
 		if (rt != ROAD_UNKNOWN) {
 			way->way_type = WAY_ROAD;
 			way->que.road.type = rt;
+			return WAY_ROAD;
 		}
 	}
 
+	tag.key = "building";
+	if (tag_mapFind(&ctx->current_tags, &ptag)) {
+			way->way_type = WAY_BUILDING;
+			return WAY_BUILDING;
+
+	}
+
+	return way->way_type = WAY_UNKNOWN;
+}
+
+static int add_node_points(struct parse_ctx *ctx, struct way *way, vec_point_t *out) {
+	int i = 0;
+	id nid = 0;
+	struct node node = {0};
+	struct node *pnode = &node;
+	vec_foreach(&way->nodes, nid, i) {
+		node.id = nid;
+		if (!node_mapFind(&ctx->nodes, &pnode)) {
+			printf("nonexistent node ref %ld\n", nid);
+			return ERR_OSM;
+		}
+		if (vec_push(out, node.pos) != 0)
+			return ERR_MEM;
+	}
+
+	return CRACKING;
+}
+
+int add_way_to_context(struct parse_ctx *ctx) {
+	struct way *way = &ctx->que.way;
+	struct tag tag = {0};
+	struct tag *ptag = &tag;
+
+	// add all ways in case they're used in relations
+	if (way_mapPut(&ctx->ways, &way, HMDR_FAIL) == HMPR_FAILED)
+		return ERR_MEM;
+
+	int ret = CRACKING;
+	enum way_type type = classify_way(ctx);
+
 	// road name and segments
-	if (way->way_type == WAY_ROAD) {
+	if (type == WAY_ROAD) {
 		tag.key = "name";
 		ptag = &tag;
 		if (tag_mapFind(&ctx->current_tags, &ptag)) {
@@ -436,26 +475,18 @@ int add_way_to_context(struct parse_ctx *ctx) {
 		}
 
 		// add road segments
-		int i = 0;
-		id nid = 0;
-		struct node node = {0};
-		struct node *pnode = &node;
-		vec_foreach(&way->nodes, nid, i) {
-			node.id = nid;
-			if (!node_mapFind(&ctx->nodes, &pnode)) {
-				printf("nonexistent node ref %ld\n", nid);
-				return ERR_OSM;
-			}
-			if (vec_push(&way->que.road.segments, node.pos) != 0)
-				return ERR_MEM;
-		}
+		if ((ret = add_node_points(ctx, way, &way->que.road.segments)) != CRACKING)
+			return ret;
 
 		ret = vec_push(&ctx->out.roads, way->que.road) == 0 ? CRACKING : ERR_MEM;
 	}
 
-	// add all ways in case they're used in relations
-	if (ret == CRACKING)
-		ret = way_mapPut(&ctx->ways, &way, HMDR_FAIL) == HMPR_FAILED ? ERR_MEM : CRACKING;
+	// building
+	else if (type == WAY_BUILDING) {
+		if ((ret = add_node_points(ctx, way, &way->que.building.points)) != CRACKING)
+			return ret;
+		ret = vec_push(&ctx->out.buildings, way->que.building) == 0 ? CRACKING : ERR_MEM;
+	}
 
 	// unset current
 	clear_current(ctx);
@@ -501,7 +532,7 @@ int parse_tag_tag(struct parse_ctx *ctx) {
 	}
 
 	struct tag *ptag = &tag;
-	if (tag_mapPut(&ctx->current_tags, &ptag, HMDR_REPLACE) == HMDR_FAIL)
+	if (tag_mapPut(&ctx->current_tags, &ptag, HMDR_REPLACE) == HMPR_FAILED)
 		return ERR_MEM;
 
 	return CRACKING;

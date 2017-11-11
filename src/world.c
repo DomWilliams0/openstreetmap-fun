@@ -21,6 +21,15 @@ void free_world(struct world *world) {
 
 	if (world->roads.data != NULL)
 		vec_deinit(&world->roads);
+
+	struct building b = {0};
+	vec_foreach(&world->buildings, b, i) {
+		if (b.points.data != NULL)
+			vec_deinit(&b.points);
+	}
+
+	if (world->buildings.data != NULL)
+		vec_deinit(&world->buildings);
 }
 
 void debug_print(struct world *world) {
@@ -34,5 +43,12 @@ void debug_print(struct world *world) {
 		if (r.name != NULL)
 			printf(" - %s", r.name);
 		printf("\n");
+	}
+
+	printf("%d buildings:\n", world->buildings.length);
+
+	struct building b = {0};
+	vec_foreach(&world->buildings, b, i) {
+		printf("\t%d points\n", b.points.length);
 	}
 }

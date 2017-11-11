@@ -25,7 +25,8 @@ struct node {
 
 enum way_type {
 	WAY_UNKNOWN = 0,
-	WAY_ROAD
+	WAY_ROAD,
+	WAY_BUILDING
 };
 
 enum road_type {
@@ -45,6 +46,10 @@ struct road {
 	char *name;
 };
 
+struct building {
+	vec_point_t points;
+};
+
 
 struct way {
 	id id;
@@ -53,6 +58,7 @@ struct way {
 	enum way_type way_type;
 	union {
 		struct road road;
+		struct building building;
 	} que;
 };
 
