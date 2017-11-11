@@ -410,8 +410,7 @@ ATTR_VISITOR(way_visitor) {
 	}
 }
 
-static enum way_type classify_way(struct parse_ctx *ctx) {
-	struct way *way = &ctx->que.way;
+static enum way_type classify_way(struct parse_ctx *ctx, struct way *way) {
 	struct tag tag = {0};
 	struct tag *ptag = &tag;
 
@@ -463,7 +462,7 @@ int add_way_to_context(struct parse_ctx *ctx) {
 		return ERR_MEM;
 
 	int ret = CRACKING;
-	enum way_type type = classify_way(ctx);
+	enum way_type type = classify_way(ctx, way);
 
 	// road name and segments
 	if (type == WAY_ROAD) {

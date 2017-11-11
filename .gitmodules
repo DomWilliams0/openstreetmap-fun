@@ -4,3 +4,6 @@
 [submodule "lib/vec"]
 	path = lib/vec
 	url = https://github.com/rxi/vec
+[submodule "lib/nanopb"]
+	path = lib/nanopb
+	url = https://github.com/nanopb/nanopb
