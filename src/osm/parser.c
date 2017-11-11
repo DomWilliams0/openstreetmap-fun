@@ -167,6 +167,11 @@ int read_line(struct parse_ctx *ctx) {
 	return ERR_IO; // never gonna get here
 }
 
+void clear_current(struct parse_ctx *ctx) {
+	ctx->current_tag = TAG_UNKNOWN;
+	memset(&ctx->que, 0, sizeof(ctx->que));
+}
+
 typedef void attr_visitor(char *key, char *val, void *data);
 #define ATTR_VISITOR(name) void name(char *key, char *val, void *data)
 
@@ -203,15 +208,13 @@ void visit_attributes(char *line, attr_visitor *visitor, void *data) {
 int add_node_to_context(struct parse_ctx *ctx) {
 	struct node *node = &ctx->que.node;
 
-	// unset current
-	ctx->current_tag = TAG_UNKNOWN;
-
 	LOG("adding node '%lu'\n", node->id);
-	HashMapPutResult res = node_mapPut(&ctx->nodes, &node, HMDR_REPLACE);
-	if (res == HMPR_FAILED)
-		return ERR_MEM;
+	int ret = node_mapPut(&ctx->nodes, &node, HMDR_FAIL) == HMPR_FAILED ? ERR_MEM : CRACKING;
 
-	return CRACKING;
+	// unset current
+	clear_current(ctx);
+
+	return ret;
 }
 
 void convert_to_pixels(double lat, double lon, point *out) {
@@ -360,17 +363,21 @@ ATTR_VISITOR(way_visitor) {
 }
 int add_way_to_context(struct parse_ctx *ctx) {
 	struct way *way = &ctx->que.way;
+	int ret = CRACKING;
+
+	if (way->way_type == WAY_ROAD) {
+		LOG("adding road '%lu'\n", way->id);
+		ret = vec_push(&ctx->out.roads, way->que.road) == 0 ? CRACKING : ERR_MEM;
+	}
+
+	// add all ways in case they're used in relations
+	if (ret == CRACKING)
+		ret = way_mapPut(&ctx->ways, &way, HMDR_FAIL) == HMPR_FAILED ? ERR_MEM : CRACKING;
 
 	// unset current
-	ctx->current_tag = TAG_UNKNOWN;
+	clear_current(ctx);
 
-	LOG("adding way '%lu'\n", way->id);
-
-	HashMapPutResult res = way_mapPut(&ctx->ways, &way, HMDR_FAIL);
-	if (res == HMPR_FAILED)
-		return ERR_MEM;
-
-	return CRACKING;
+	return ret;
 }
 
 
@@ -397,6 +404,32 @@ int parse_way_tag(struct parse_ctx *ctx, bool opening) {
 	return CRACKING;
 }
 
+static enum road_type parse_road_type(const char *s) {
+	// big roads
+	if (strcmp(s, "motorway") == 0) return ROAD_MOTORWAY;
+	else if (strcmp(s, "motorway_link") == 0) return ROAD_MOTORWAY;
+	else if (strcmp(s, "primary_link") == 0) return ROAD_PRIMARY;
+	else if (strcmp(s, "primary") == 0) return ROAD_PRIMARY;
+	else if (strcmp(s, "trunk") == 0) return ROAD_PRIMARY;
+	else if (strcmp(s, "trunk_link") == 0) return ROAD_PRIMARY;
+
+	// smaller roads
+	else if (strcmp(s, "secondary_link") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "secondary") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "tertiary") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "tertiary_link") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "living_street") == 0) return ROAD_MINOR;
+	else if (strcmp(s, "unclassified") == 0) return ROAD_MINOR;
+	else if (strcmp(s, "minor") == 0) return ROAD_MINOR;
+	else if (strcmp(s, "residential") == 0) return ROAD_MINOR;
+
+	// pedestrians
+	else if (strcmp(s, "pedestrian") == 0) return ROAD_PEDESTRIAN;
+	else if (strcmp(s, "footway") == 0) return ROAD_PEDESTRIAN;
+
+	else return ROAD_UNKNOWN;
+}
+
 int parse_tag_tag(struct parse_ctx *ctx) {
 	if (ctx->current_tag != TAG_NODE && ctx->current_tag != TAG_WAY) {
 		printf("tag tag found inside non-node or way tag '%s'\n", tag_lookup[ctx->current_tag]);
@@ -409,7 +442,32 @@ int parse_tag_tag(struct parse_ctx *ctx) {
 		printf("bad tag\n");
 		return ERR_OSM;
 	}
-	// TODO actually use the tag
+
+	// way classification
+	if (ctx->current_tag == TAG_WAY) {
+		struct way *way = &ctx->que.way;
+		if (way->way_type == WAY_UNKNOWN) {
+
+			// road
+			if (strcmp(key_val[0], "highway") == 0) {
+				struct road *road = &way->que.road;
+				if ((road->type = parse_road_type(key_val[1])) != ROAD_UNKNOWN) {
+					way->way_type = WAY_ROAD;
+				}
+			}
+		}
+
+		// road name
+		if (way->way_type == WAY_ROAD) {
+			if (strcmp(key_val[0], "name") == 0) {
+				if ((way->que.road.name = strdup(key_val[1])) == NULL)
+					return ERR_MEM;
+			}
+		}
+
+	}
+
+
 	return CRACKING;
 }
 
@@ -478,6 +536,9 @@ int parse_osm(char *file_path, struct world *out) {
 		struct way *w = NULL;
 		HASHMAP_FOR_EACH(way_map, w, ctx.ways) {
 			LOG("way %lu has %d\n", w->id,  w->nodes.length);
+			if (w->way_type == WAY_ROAD) {
+				LOG("is a road of type %d called '%s'\n", w->que.road.type, w->que.road.name);
+			}
 		} HASHMAP_FOR_EACH_END
 	}
 

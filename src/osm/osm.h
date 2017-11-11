@@ -17,10 +17,20 @@ struct node {
 	point pos;
 };
 
-// TODO move to way.h
+
+enum way_type {
+	WAY_UNKNOWN = 0,
+	WAY_ROAD
+};
+
 struct way {
 	id id;
 	vec_id_t nodes;
+
+	enum way_type way_type;
+	union {
+		struct road road;
+	} que;
 };
 
 #endif

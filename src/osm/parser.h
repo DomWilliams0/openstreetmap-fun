@@ -14,11 +14,12 @@ typedef struct {
 typedef vec_t(point) vec_point_t;
 
 enum road_type {
+	ROAD_UNKNOWN = 0,
 	ROAD_MOTORWAY,
 	ROAD_PRIMARY,
 	ROAD_SECONDARY,
 	ROAD_MINOR,
-	ROAD_PEDESTRIAN
+	ROAD_PEDESTRIAN // TODO footpath is not a road!
 };
 
 struct road {
