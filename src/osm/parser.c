@@ -529,17 +529,22 @@ int parse_osm(char *file_path, struct world *out) {
 		ctx.f = NULL;
 
 		make_coords_relative(&ctx);
-
-		struct way *w = NULL;
-		HASHMAP_FOR_EACH(way_map, w, ctx.ways) {
-			LOG("way %lu has %d\n", w->id,  w->nodes.length);
-			if (w->way_type == WAY_ROAD) {
-				LOG("is a road of type %d called '%s'\n", w->que.road.type, w->que.road.name);
-			}
-		} HASHMAP_FOR_EACH_END
 	}
 
 	*out = ctx.out;
 	free_context(&ctx);
 	return ret;
+}
+
+const char *road_type_lookup[] = {
+	"unknown",
+	"motorway",
+	"primary",
+	"secondary",
+	"minor",
+	"pedestrian"
+};
+
+const char *road_type_to_string(enum road_type rt) {
+	return road_type_lookup[rt];
 }

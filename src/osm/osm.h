@@ -31,6 +31,8 @@ enum road_type {
 	ROAD_PEDESTRIAN // TODO footpath is not a road!
 };
 
+const char *road_type_to_string(enum road_type rt);
+
 struct road {
 	enum road_type type;
 	vec_point_t segments;

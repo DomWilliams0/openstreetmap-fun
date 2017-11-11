@@ -8,8 +8,12 @@ int main() {
 
 	struct world world;
 	int ret = parse_osm("../xmls/place.xml", &world);
-	printf("result: %s\n", error_get_message(ret));
 
-	if (ret == CRACKING)
-		free_world(&world);
+	if (ret != CRACKING) {
+		printf("error: %s\n", error_get_message(ret));
+		return 1;
+	}
+
+	debug_print(&world);
+	free_world(&world);
 }

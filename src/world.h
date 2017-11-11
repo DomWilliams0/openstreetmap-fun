@@ -13,6 +13,8 @@ int init_world(struct world *world);
 
 void free_world(struct world *world);
 
+void debug_print(struct world *world);
+
 
 #endif
 
