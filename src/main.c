@@ -5,9 +5,10 @@
 
 int main() {
 
-	struct context ctx;
-	int ret = parse_xml("../xmls/place.xml", &ctx);
+	struct world world;
+	int ret = parse_osm("../xmls/place.xml", &world);
 	printf("result: %s\n", error_get_message(ret));
 
-	free_context(&ctx);
+	if (ret == CRACKING)
+		free_world(&world);
 }

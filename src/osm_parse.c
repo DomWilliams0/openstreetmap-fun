@@ -16,6 +16,22 @@
 #define LOG //
 #endif
 
+DEFINE_HASHMAP(node_map, struct node);
+DEFINE_HASHMAP(way_map, struct way);
+
+typedef int64_t id;
+typedef vec_t(id) vec_id_t;
+
+struct node {
+	id id;
+	point pos;
+};
+
+struct way {
+	id id;
+	vec_id_t nodes;
+};
+
 #define NODE_CMP(left, right) left->id != right->id
 #define NODE_HASH(entry) entry->id
 DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc);
@@ -67,7 +83,6 @@ struct xml_tag parse_tag(char *tag_in) {
 
 struct parse_ctx {
 	FILE *f;
-	struct context out;
 	size_t n;
 	char *full_line;
 	char *line_end;
@@ -82,7 +97,11 @@ struct parse_ctx {
 
 	double lat_range[2];
 	double lon_range[2];
-	// TODO put world size into context
+
+	node_map nodes;
+	way_map ways;
+
+	struct world out;
 };
 
 int open_file(struct parse_ctx *ctx, char *file_path) {
@@ -202,7 +221,7 @@ int add_node_to_context(struct parse_ctx *ctx) {
 	ctx->current_tag = TAG_UNKNOWN;
 
 	LOG("adding node '%lu'\n", node->id);
-	HashMapPutResult res = node_mapPut(&ctx->out.nodes, &node, HMDR_REPLACE);
+	HashMapPutResult res = node_mapPut(&ctx->nodes, &node, HMDR_REPLACE);
 	if (res == HMPR_FAILED)
 		return ERR_MEM;
 
@@ -226,8 +245,8 @@ void make_coords_relative(struct parse_ctx *ctx) {
 	convert_to_pixels(ctx->lat_range[1], ctx->lon_range[0], &min);
 	convert_to_pixels(ctx->lat_range[0], ctx->lon_range[1], &max);
 
-	struct node *node;
-	HASHMAP_FOR_EACH(node_map, node, ctx->out.nodes) {
+	struct node *node = NULL;
+	HASHMAP_FOR_EACH(node_map, node, ctx->nodes) {
 		node->pos.x -= min.x;
 		node->pos.y -= min.y;
 	} HASHMAP_FOR_EACH_END
@@ -361,7 +380,7 @@ int add_way_to_context(struct parse_ctx *ctx) {
 
 	LOG("adding way '%lu'\n", way->id);
 
-	HashMapPutResult res = way_mapPut(&ctx->out.ways, &way, HMDR_FAIL);
+	HashMapPutResult res = way_mapPut(&ctx->ways, &way, HMDR_FAIL);
 	if (res == HMPR_FAILED)
 		return ERR_MEM;
 
@@ -408,9 +427,25 @@ int parse_tag_tag(struct parse_ctx *ctx) {
 	return CRACKING;
 }
 
-int parse_xml(char *file_path, struct context *out) {
+void free_context(struct parse_ctx *ctx) {
+	node_mapDestroy(&ctx->nodes);
+
+	struct way *way = NULL;
+	HASHMAP_FOR_EACH(way_map, way, ctx->ways) {
+		vec_deinit(&way->nodes);
+	} HASHMAP_FOR_EACH_END
+
+	way_mapDestroy(&ctx->ways);
+}
+
+void init_world(struct world *world) {
+	vec_init(&world->roads);
+}
+
+int parse_osm(char *file_path, struct world *out) {
 	struct parse_ctx ctx = {0};
 	ctx.current_tag = TAG_UNKNOWN;
+	init_world(&ctx.out);
 
 	int ret = CRACKING;
 
@@ -454,24 +489,18 @@ int parse_xml(char *file_path, struct context *out) {
 
 		make_coords_relative(&ctx);
 
-		struct way *w;
-		HASHMAP_FOR_EACH(way_map, w, ctx.out.ways) {
+		struct way *w = NULL;
+		HASHMAP_FOR_EACH(way_map, w, ctx.ways) {
 			LOG("way %lu has %d\n", w->id,  w->nodes.length);
 		} HASHMAP_FOR_EACH_END
-
-		*out = ctx.out;
 	}
 
+	*out = ctx.out;
+	free_context(&ctx);
 	return ret;
 }
 
-void free_context(struct context *ctx) {
-	node_mapDestroy(&ctx->nodes);
-
-	struct way *way;
-	HASHMAP_FOR_EACH(way_map, way, ctx->ways) {
-		vec_deinit(&way->nodes);
-	} HASHMAP_FOR_EACH_END
-
-	way_mapDestroy(&ctx->ways);
+void free_world(struct world *world) {
+	if (world->roads.data != NULL)
+		vec_deinit(&world->roads);
 }

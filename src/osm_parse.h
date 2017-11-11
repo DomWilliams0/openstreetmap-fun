@@ -5,36 +5,35 @@
 #include "hashmap.h"
 #include "vec.h"
 
-typedef int64_t id;
 typedef uint32_t coord;
 
 typedef struct {
 	coord x, y;
 } point;
-
-DEFINE_HASHMAP(node_map, struct node);
-DEFINE_HASHMAP(way_map, struct way);
-typedef vec_t(id) vec_id_t;
-
-struct node {
-	id id;
-	point pos;
+typedef vec_t(point) vec_point_t;
+enum ROAD_TYPE {
+	ROAD_MOTORWAY,
+	ROAD_PRIMARY,
+	ROAD_SECONDARY,
+	ROAD_MINOR,
+	ROAD_PEDESTRIAN
 };
 
-struct way {
-	id id;
-	vec_id_t nodes;
+struct road {
+	enum ROAD_TYPE type;
+	vec_point_t segments;
+	char *name;
 };
+typedef vec_t(struct road) vec_road_t;
 
-struct context {
-	node_map nodes;
-	way_map ways;
+struct world {
 	coord bounds[2];
+	vec_road_t roads;
 };
 
-int parse_xml(char *file_path, struct context *out);
+int parse_osm(char *file_path, struct world *out);
 
-void free_context(struct context *ctx);
+void free_world(struct world *world);
 
 
 #endif
