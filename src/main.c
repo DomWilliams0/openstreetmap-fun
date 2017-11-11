@@ -2,6 +2,7 @@
 
 #include "error.h"
 #include "osm/parser.h"
+#include "world.h"
 
 int main() {
 

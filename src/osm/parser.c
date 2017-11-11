@@ -9,6 +9,7 @@
 #include <limits.h>
 
 #include "osm.h"
+#include "world.h"
 
 #ifdef DEBUG
 #define LOG printf
@@ -482,10 +483,6 @@ void free_context(struct parse_ctx *ctx) {
 	way_mapDestroy(&ctx->ways);
 }
 
-void init_world(struct world *world) {
-	vec_init(&world->roads);
-}
-
 int parse_osm(char *file_path, struct world *out) {
 	struct parse_ctx ctx = {0};
 	ctx.current_tag = TAG_UNKNOWN;
@@ -545,9 +542,4 @@ int parse_osm(char *file_path, struct world *out) {
 	*out = ctx.out;
 	free_context(&ctx);
 	return ret;
-}
-
-void free_world(struct world *world) {
-	if (world->roads.data != NULL)
-		vec_deinit(&world->roads);
 }

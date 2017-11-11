@@ -17,11 +17,26 @@ struct node {
 	point pos;
 };
 
-
 enum way_type {
 	WAY_UNKNOWN = 0,
 	WAY_ROAD
 };
+
+enum road_type {
+	ROAD_UNKNOWN = 0,
+	ROAD_MOTORWAY,
+	ROAD_PRIMARY,
+	ROAD_SECONDARY,
+	ROAD_MINOR,
+	ROAD_PEDESTRIAN // TODO footpath is not a road!
+};
+
+struct road {
+	enum road_type type;
+	vec_point_t segments;
+	char *name;
+};
+
 
 struct way {
 	id id;
