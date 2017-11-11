@@ -44,6 +44,7 @@ struct parse_ctx {
 		struct node node;
 		struct way way;
 	} que;
+	tag_map current_tags;
 
 	double lat_range[2];
 	double lon_range[2];
@@ -168,9 +169,18 @@ int read_line(struct parse_ctx *ctx) {
 	return ERR_IO; // never gonna get here
 }
 
+// current_tags must have been init'd already
 void clear_current(struct parse_ctx *ctx) {
 	ctx->current_tag = TAG_UNKNOWN;
 	memset(&ctx->que, 0, sizeof(ctx->que));
+
+	struct tag *tag = NULL;
+	HASHMAP_FOR_EACH(tag_map, tag, ctx->current_tags) {
+		free(tag->key);
+		free(tag->val);
+	} HASHMAP_FOR_EACH_END
+	tag_mapDestroy(&ctx->current_tags);
+	tag_mapNew(&ctx->current_tags);
 }
 
 typedef void attr_visitor(char *key, char *val, void *data);
@@ -329,10 +339,10 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 ATTR_VISITOR(tag_visitor) {
 	switch(key[0]) {
 		case 'k':
-			((char **)data)[0] = val;
+			((struct tag *)data)->key = strdup(val);
 			break;
 		case 'v':
-			((char **)data)[1] = val;
+			((struct tag *)data)->val = strdup(val);
 			break;
 	}
 }
@@ -363,6 +373,33 @@ int parse_node_ref_tag(struct parse_ctx *ctx) {
 	return vec_push(&way->nodes, id) == 0 ? CRACKING : ERR_MEM;
 }
 
+static enum road_type parse_road_type(const char *s) {
+	// big roads
+	if (strcmp(s, "motorway") == 0) return ROAD_MOTORWAY;
+	else if (strcmp(s, "motorway_link") == 0) return ROAD_MOTORWAY;
+	else if (strcmp(s, "primary_link") == 0) return ROAD_PRIMARY;
+	else if (strcmp(s, "primary") == 0) return ROAD_PRIMARY;
+	else if (strcmp(s, "trunk") == 0) return ROAD_PRIMARY;
+	else if (strcmp(s, "trunk_link") == 0) return ROAD_PRIMARY;
+
+	// smaller roads
+	else if (strcmp(s, "secondary_link") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "secondary") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "tertiary") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "tertiary_link") == 0) return ROAD_SECONDARY;
+	else if (strcmp(s, "living_street") == 0) return ROAD_MINOR;
+	else if (strcmp(s, "unclassified") == 0) return ROAD_MINOR;
+	else if (strcmp(s, "minor") == 0) return ROAD_MINOR;
+	else if (strcmp(s, "residential") == 0) return ROAD_MINOR;
+
+	// pedestrians
+	else if (strcmp(s, "pedestrian") == 0) return ROAD_PEDESTRIAN;
+	else if (strcmp(s, "footway") == 0) return ROAD_PEDESTRIAN;
+
+	else return ROAD_UNKNOWN;
+}
+
+
 ATTR_VISITOR(way_visitor) {
 
 	if (strcmp(key, "id") == 0) {
@@ -372,12 +409,31 @@ ATTR_VISITOR(way_visitor) {
 		}
 	}
 }
+
 int add_way_to_context(struct parse_ctx *ctx) {
 	struct way *way = &ctx->que.way;
 	int ret = CRACKING;
+	struct tag tag = {0};
+	struct tag *ptag = &tag;
 
+	// classification
+	tag.key = "highway";
+	if (tag_mapFind(&ctx->current_tags, &ptag)) {
+		enum road_type rt = parse_road_type(ptag->val);
+		if (rt != ROAD_UNKNOWN) {
+			way->way_type = WAY_ROAD;
+			way->que.road.type = rt;
+		}
+	}
+
+	// road name and segments
 	if (way->way_type == WAY_ROAD) {
-		LOG("adding road '%lu'\n", way->id);
+		tag.key = "name";
+		ptag = &tag;
+		if (tag_mapFind(&ctx->current_tags, &ptag)) {
+			if ((way->que.road.name = strdup(ptag->val)) == NULL)
+				return ERR_MEM;
+		}
 
 		// add road segments
 		int i = 0;
@@ -431,69 +487,22 @@ int parse_way_tag(struct parse_ctx *ctx, bool opening) {
 	return CRACKING;
 }
 
-static enum road_type parse_road_type(const char *s) {
-	// big roads
-	if (strcmp(s, "motorway") == 0) return ROAD_MOTORWAY;
-	else if (strcmp(s, "motorway_link") == 0) return ROAD_MOTORWAY;
-	else if (strcmp(s, "primary_link") == 0) return ROAD_PRIMARY;
-	else if (strcmp(s, "primary") == 0) return ROAD_PRIMARY;
-	else if (strcmp(s, "trunk") == 0) return ROAD_PRIMARY;
-	else if (strcmp(s, "trunk_link") == 0) return ROAD_PRIMARY;
-
-	// smaller roads
-	else if (strcmp(s, "secondary_link") == 0) return ROAD_SECONDARY;
-	else if (strcmp(s, "secondary") == 0) return ROAD_SECONDARY;
-	else if (strcmp(s, "tertiary") == 0) return ROAD_SECONDARY;
-	else if (strcmp(s, "tertiary_link") == 0) return ROAD_SECONDARY;
-	else if (strcmp(s, "living_street") == 0) return ROAD_MINOR;
-	else if (strcmp(s, "unclassified") == 0) return ROAD_MINOR;
-	else if (strcmp(s, "minor") == 0) return ROAD_MINOR;
-	else if (strcmp(s, "residential") == 0) return ROAD_MINOR;
-
-	// pedestrians
-	else if (strcmp(s, "pedestrian") == 0) return ROAD_PEDESTRIAN;
-	else if (strcmp(s, "footway") == 0) return ROAD_PEDESTRIAN;
-
-	else return ROAD_UNKNOWN;
-}
-
 int parse_tag_tag(struct parse_ctx *ctx) {
 	if (ctx->current_tag != TAG_NODE && ctx->current_tag != TAG_WAY) {
 		printf("tag tag found inside non-node or way tag '%s'\n", tag_lookup[ctx->current_tag]);
 		return ERR_OSM;
 	}
 
-	char *key_val[2] = {0};
-	visit_attributes(ctx->attr_start, tag_visitor, &key_val);
-	if (key_val[0] == NULL || key_val[1] == NULL) {
-		printf("bad tag\n");
+	struct tag tag = {0};
+	visit_attributes(ctx->attr_start, tag_visitor, &tag);
+	if (tag.key == NULL || tag.val == NULL) {
+		printf("bad tag or memory error\n");
 		return ERR_OSM;
 	}
 
-	// way classification
-	if (ctx->current_tag == TAG_WAY) {
-		struct way *way = &ctx->que.way;
-		if (way->way_type == WAY_UNKNOWN) {
-
-			// road
-			if (strcmp(key_val[0], "highway") == 0) {
-				struct road *road = &way->que.road;
-				if ((road->type = parse_road_type(key_val[1])) != ROAD_UNKNOWN) {
-					way->way_type = WAY_ROAD;
-				}
-			}
-		}
-
-		// road name
-		if (way->way_type == WAY_ROAD) {
-			if (strcmp(key_val[0], "name") == 0) {
-				if ((way->que.road.name = strdup(key_val[1])) == NULL)
-					return ERR_MEM;
-			}
-		}
-
-	}
-
+	struct tag *ptag = &tag;
+	if (tag_mapPut(&ctx->current_tags, &ptag, HMDR_REPLACE) == HMDR_FAIL)
+		return ERR_MEM;
 
 	return CRACKING;
 }

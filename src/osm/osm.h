@@ -9,6 +9,12 @@
 DEFINE_HASHMAP(node_map, struct node)
 DEFINE_HASHMAP(way_map, struct way)
 
+struct tag {
+	char *key;
+	char *val;
+};
+DEFINE_HASHMAP(tag_map, struct tag)
+
 typedef int64_t id;
 typedef vec_t(id) vec_id_t;
 
