@@ -4,5 +4,6 @@
 *.lib
 obj/
 bin/
+gen/
 .ycm_extra_conf.py
 .exrc
