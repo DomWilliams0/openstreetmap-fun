@@ -1,5 +1,5 @@
-#ifndef OSM_OSM_PARSE
-#define OSM_OSM_PARSE
+#ifndef OSM_PARSER
+#define OSM_PARSER
 
 #include <stdint.h>
 #include "hashmap.h"
@@ -10,8 +10,10 @@ typedef uint32_t coord;
 typedef struct {
 	coord x, y;
 } point;
+
 typedef vec_t(point) vec_point_t;
-enum ROAD_TYPE {
+
+enum road_type {
 	ROAD_MOTORWAY,
 	ROAD_PRIMARY,
 	ROAD_SECONDARY,
@@ -20,7 +22,7 @@ enum ROAD_TYPE {
 };
 
 struct road {
-	enum ROAD_TYPE type;
+	enum road_type type;
 	vec_point_t segments;
 	char *name;
 };

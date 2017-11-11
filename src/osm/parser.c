@@ -8,29 +8,13 @@
 #include <math.h>
 #include <limits.h>
 
-#include "osm_parse.h"
+#include "osm.h"
 
 #ifdef DEBUG
 #define LOG printf
 #else
 #define LOG //
 #endif
-
-DEFINE_HASHMAP(node_map, struct node)
-DEFINE_HASHMAP(way_map, struct way)
-
-typedef int64_t id;
-typedef vec_t(id) vec_id_t;
-
-struct node {
-	id id;
-	point pos;
-};
-
-struct way {
-	id id;
-	vec_id_t nodes;
-};
 
 #define NODE_CMP(left, right) left->id != right->id
 #define NODE_HASH(entry) entry->id
@@ -45,6 +29,30 @@ enum tag_type {
 	TAG_RELATION,
 	TAG_UNKNOWN
 };
+
+struct parse_ctx {
+	FILE *f;
+	size_t n;
+	char *full_line;
+	char *line_end;
+	char *tag_start;
+	char *attr_start;
+
+	enum tag_type current_tag;
+	union {
+		struct node node;
+		struct way way;
+	} que;
+
+	double lat_range[2];
+	double lon_range[2];
+
+	node_map nodes;
+	way_map ways;
+
+	struct world out;
+};
+
 
 struct xml_tag {
 	enum tag_type type;
@@ -81,28 +89,6 @@ struct xml_tag parse_tag(char *tag_in) {
 	return out;
 }
 
-struct parse_ctx {
-	FILE *f;
-	size_t n;
-	char *full_line;
-	char *line_end;
-	char *tag_start;
-	char *attr_start;
-
-	enum tag_type current_tag;
-	union {
-		struct node node;
-		struct way way;
-	} que;
-
-	double lat_range[2];
-	double lon_range[2];
-
-	node_map nodes;
-	way_map ways;
-
-	struct world out;
-};
 
 int open_file(struct parse_ctx *ctx, char *file_path) {
 	ctx->f = fopen(file_path, "r");

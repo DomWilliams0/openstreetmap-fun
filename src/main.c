@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "error.h"
-#include "osm_parse.h"
+#include "osm/parser.h"
 
 int main() {
 
