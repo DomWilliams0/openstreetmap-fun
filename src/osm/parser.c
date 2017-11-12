@@ -445,7 +445,8 @@ static int add_node_points(struct parse_ctx *ctx, struct way *way, vec_point_t *
 			printf("nonexistent node ref %ld\n", nid);
 			return ERR_OSM;
 		}
-		if (vec_push(out, node.pos) != 0)
+
+		if (vec_push(out, pnode->pos) != 0)
 			return ERR_MEM;
 	}
 
