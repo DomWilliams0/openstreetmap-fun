@@ -5,6 +5,7 @@ SRC        = src
 PROTO      = proto
 GEN        = gen
 TEST       = tests
+BUILD_DIRS = $(BIN) $(OBJ) $(GEN)
 
 LIB_CFLAGS = -I$(LIB)/generic-c-hashmap -I$(LIB)/vec/src $(shell pkg-config --cflags 'libprotobuf-c >= 1.0.0') -I$(LIB)/acutest/include
 CFLAGS     = -std=c11 -Wall -Wextra -Wpedantic -O1 -I$(SRC) $(LIB_CFLAGS) -D_GNU_SOURCE
@@ -39,15 +40,15 @@ VPATH  = $(shell find $(SRC) $(LIB) $(TEST) -type d)
 .PHONY: default
 default: run
 
-.PHONY: bin
-bin: $(TARGET_EXE)
+.PHONY: exe
+exe: $(TARGET_EXE)
 
 .PHONY: test
 test: $(TARGET_TEST)
 	@$(TARGET_TEST)
 
 .PHONY: pb
-pb: $(PROTO_OBJ) | build_dirs
+pb: $(PROTO_OBJ)
 
 .PHONY: clean
 clean:
@@ -65,18 +66,17 @@ $(TARGET_TEST): $(TARGET_LIB) $(SRCS_TESTS)
 	$(CC) $(SRCS_TESTS) $(CFLAGS) $(LDFLAGS) -o $@
 
 # src -> obj
-$(OBJS): $(OBJ)/%.o : %.c build_dirs
+$(OBJS): $(OBJ)/%.o : %.c | $(OBJ) $(BIN)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(GEN)/%.pb-c.c: $(PROTO)/%.proto
+$(GEN)/%.pb-c.c: $(PROTO)/%.proto | $(GEN)
 	protoc --c_out=$(GEN) -I $(PROTO) $<
 
 $(OBJ)/%.pb-c.o: $(GEN)/%.pb-c.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-.PHONY: build_dirs
-build_dirs:
-	@mkdir -p $(BIN) $(OBJ) $(GEN)
+$(BUILD_DIRS):
+	@mkdir -p $(BUILD_DIRS)
 
 .PHONY: run
 run: $(TARGET_EXE)
