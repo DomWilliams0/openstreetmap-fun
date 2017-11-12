@@ -232,6 +232,27 @@ void convert_to_pixels(double lat, double lon, point *out) {
 	out->y = (coord)((1.0 - log(tan(lat_rad) + (1.0 / cos(lat_rad))) / PI) / 2.0 * N);
 }
 
+static void make_segments_relative(struct parse_ctx *ctx, point to_subtract) {
+	int i = 0, j = 0;
+	struct road *r = NULL;
+	struct building *b = NULL;
+	point *p = NULL;
+
+	vec_foreach_ptr(&ctx->out.roads, r, i) {
+		vec_foreach_ptr(&r->segments, p, j) {
+			p->x -= to_subtract.x;
+			p->y -= to_subtract.y;
+		}
+	}
+
+	vec_foreach_ptr(&ctx->out.buildings, b, i) {
+		vec_foreach_ptr(&b->points, p, j) {
+			p->x -= to_subtract.x;
+			p->y -= to_subtract.y;
+		}
+	}
+}
+
 void make_coords_relative(struct parse_ctx *ctx) {
 	point min = {
 		.x = UINT_MAX,
@@ -256,6 +277,10 @@ void make_coords_relative(struct parse_ctx *ctx) {
 		node->pos.x -= min.x;
 		node->pos.y -= min.y;
 	} HASHMAP_FOR_EACH_END
+
+	// update all buildings and roads
+	// TODO this is awful!
+	make_segments_relative(ctx, min);
 
 	ctx->out.bounds[0] = max.x - min.x;
 	ctx->out.bounds[1] = max.y - min.y;
@@ -285,11 +310,11 @@ ATTR_VISITOR(node_visitor) {
 	}
 
 	else if (strcmp(key, "lat") == 0) {
-		((struct node_lat *)data)->lat = strtold(val, NULL);;
+		((struct node_lat *)data)->lat = strtold(val, NULL);
 	}
 
 	else if (strcmp(key, "lon") == 0) {
-		((struct node_lat *)data)->lon = strtold(val, NULL);;
+		((struct node_lat *)data)->lon = strtold(val, NULL);
 	}
 }
 
@@ -431,9 +456,10 @@ static int add_node_points(struct parse_ctx *ctx, struct way *way, vec_point_t *
 	int i = 0;
 	id nid = 0;
 	struct node node = {0};
-	struct node *pnode = &node;
+	struct node *pnode = NULL;
 	vec_foreach(&way->nodes, nid, i) {
 		node.id = nid;
+		pnode = &node;
 		if (!node_mapFind(&ctx->nodes, &pnode)) {
 			fprintf(stderr, "nonexistent node ref %ld\n", nid);
 			return ERR_OSM;

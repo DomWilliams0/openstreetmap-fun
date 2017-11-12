@@ -21,11 +21,11 @@ void test_roads() {
 
 	{
 		point cmp = {95, 18};
-		TEST_CHECK(memcmp(r.segments.data + 0, &cmp, sizeof(point)) == 0);
+		TEST_CHECK(r.segments.data[0].x == cmp.x && r.segments.data[0].y == cmp.y);
 	}
 	{
 		point cmp = {0, 0};
-		TEST_CHECK(memcmp(r.segments.data + 1, &cmp, sizeof(point)) == 0);
+		TEST_CHECK(r.segments.data[1].x == cmp.x && r.segments.data[1].y == cmp.y);
 	}
 	free_world(&w);
 }
@@ -40,11 +40,11 @@ void test_buildings() {
 
 	{
 		point cmp = {174, 19};
-		TEST_CHECK(memcmp(b.points.data + 0, &cmp, sizeof(point)) == 0);
+		TEST_CHECK(b.points.data[0].x == cmp.x && b.points.data[0].y == cmp.y);
 	}
 	{
 		point cmp = {179, 23};
-		TEST_CHECK(memcmp(b.points.data + 1, &cmp, sizeof(point)) == 0);
+		TEST_CHECK(b.points.data[1].x == cmp.x && b.points.data[1].y == cmp.y);
 	}
 	free_world(&w);
 }
