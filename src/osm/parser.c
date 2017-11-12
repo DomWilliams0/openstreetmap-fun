@@ -219,7 +219,6 @@ void visit_attributes(char *line, attr_visitor *visitor, void *data) {
 int add_node_to_context(struct parse_ctx *ctx) {
 	struct node *node = &ctx->que.node;
 
-	LOG("adding node '%lu'\n", node->id);
 	int ret = node_mapPut(&ctx->nodes, &node, HMDR_FAIL) == HMPR_FAILED ? ERR_MEM : CRACKING;
 
 	// unset current
