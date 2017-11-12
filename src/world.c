@@ -90,6 +90,24 @@ static bool encode_points(pb_ostream_t *stream, const pb_field_t *field, void * 
 	return true;
 }
 
+static RoadType convert_road_type(enum road_type rt) {
+	switch (rt) {
+		case ROAD_MOTORWAY:
+			return RoadType_MOTORWAY;
+		case ROAD_PRIMARY:
+			return RoadType_PRIMARY;
+		case ROAD_SECONDARY:
+			return RoadType_SECONDARY;
+		case ROAD_MINOR:
+			return RoadType_MINOR;
+		case ROAD_PEDESTRIAN:
+			return RoadType_PEDESTRIAN;
+		case ROAD_UNKNOWN:
+		default:
+			return RoadType_UNKNOWN;
+	}
+}
+
 static bool encode_roads(pb_ostream_t *stream, const pb_field_t *field, void * const *arg) {
 	struct world *world = (struct world *)*arg;
 
@@ -100,6 +118,7 @@ static bool encode_roads(pb_ostream_t *stream, const pb_field_t *field, void * c
 		r.type = RoadType_MOTORWAY;
 		r.name.funcs.encode = encode_string;
 		r.name.arg = road.name;
+		r.type = convert_road_type(road.type);
 		r.segments.funcs.encode = encode_points;
 		r.segments.arg = &road.segments;
 
@@ -107,6 +126,26 @@ static bool encode_roads(pb_ostream_t *stream, const pb_field_t *field, void * c
 			return false;
 
 		if (!pb_encode_submessage(stream, Road_fields, &r))
+			return false;
+	}
+
+	return true;
+}
+
+static bool encode_buildings(pb_ostream_t *stream, const pb_field_t *field, void * const *arg) {
+	struct world *world = (struct world *)*arg;
+
+	int i = 0;
+	struct building building = {0};
+	vec_foreach(&world->buildings, building, i) {
+		Building b = Building_init_zero;
+		b.points.funcs.encode = encode_points;
+		b.points.arg = &building.points;
+
+		if (!pb_encode_tag_for_field(stream, field))
+			return false;
+
+		if (!pb_encode_submessage(stream, Building_fields, &b))
 			return false;
 	}
 
@@ -122,7 +161,8 @@ static bool dump_to_file_safe(struct world *world, FILE *file) {
 	msg.roads.funcs.encode = encode_roads;
 	msg.roads.arg = world;
 
-	// TODO buildings
+	msg.buildings.funcs.encode = encode_buildings;
+	msg.buildings.arg = world;
 
 	pb_ostream_t os;
 	os.callback = write_callback;
