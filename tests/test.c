@@ -5,6 +5,7 @@
 #include "osm/parser.h"
 
 int create_test_world(struct world *out) {
+	err_stream = fopen("/dev/null", "w");
 	return parse_osm("tests/example.osm", out);
 }
 

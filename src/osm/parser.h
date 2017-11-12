@@ -2,8 +2,11 @@
 #define OSM_PARSER
 
 #include <stdint.h>
+#include <stdio.h>
 #include "hashmap.h"
 #include "vec.h"
+
+extern FILE *err_stream;
 
 struct world;
 
