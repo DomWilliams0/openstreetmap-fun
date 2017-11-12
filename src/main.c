@@ -15,5 +15,7 @@ int main() {
 	}
 
 	debug_print(&world);
+	if (!dump_to_file(&world, "world.bin"))
+		fprintf(stderr, "failed to dump world to file\n");
 	free_world(&world);
 }

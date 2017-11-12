@@ -17,6 +17,8 @@ void free_world(struct world *world);
 
 void debug_print(struct world *world);
 
+bool dump_to_file(struct world *world, char *path);
+
 
 #endif
 
