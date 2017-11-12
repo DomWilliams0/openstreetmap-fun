@@ -7,3 +7,6 @@
 [submodule "lib/nanopb"]
 	path = lib/nanopb
 	url = https://github.com/nanopb/nanopb
+[submodule "lib/acutest"]
+	path = lib/acutest
+	url = https://github.com/mity/acutest
