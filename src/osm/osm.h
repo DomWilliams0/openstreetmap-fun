@@ -38,6 +38,14 @@ enum road_type {
 	ROAD_PEDESTRIAN // TODO footpath is not a road!
 };
 
+enum building_type {
+	BUILDING_UNKNOWN = 0,
+	BUILDING_ACCOMODATION,
+	BUILDING_COMMERCIAL,
+	BUILDING_CIVIC,
+	BUILDING_OTHER
+};
+
 const char *road_type_to_string(enum road_type rt);
 
 struct road {
@@ -47,6 +55,7 @@ struct road {
 };
 
 struct building {
+	enum building_type type;
 	vec_point_t points;
 };
 

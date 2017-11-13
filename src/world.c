@@ -93,18 +93,34 @@ static bool encode_points(pb_ostream_t *stream, const pb_field_t *field, void * 
 static RoadType convert_road_type(enum road_type rt) {
 	switch (rt) {
 		case ROAD_MOTORWAY:
-			return RoadType_MOTORWAY;
+			return RoadType_R_MOTORWAY;
 		case ROAD_PRIMARY:
-			return RoadType_PRIMARY;
+			return RoadType_R_PRIMARY;
 		case ROAD_SECONDARY:
-			return RoadType_SECONDARY;
+			return RoadType_R_SECONDARY;
 		case ROAD_MINOR:
-			return RoadType_MINOR;
+			return RoadType_R_MINOR;
 		case ROAD_PEDESTRIAN:
-			return RoadType_PEDESTRIAN;
+			return RoadType_R_PEDESTRIAN;
 		case ROAD_UNKNOWN:
 		default:
-			return RoadType_UNKNOWN;
+			return RoadType_R_UNKNOWN;
+	}
+}
+
+static BuildingType convert_building_type(enum building_type bt) {
+	switch (bt) {
+		case BUILDING_ACCOMODATION:
+			return BuildingType_B_ACCOMODATION;
+		case BUILDING_COMMERCIAL:
+			return BuildingType_B_COMMERCIAL;
+		case BUILDING_CIVIC:
+			return BuildingType_B_CIVIC;
+		case BUILDING_OTHER:
+			return BuildingType_B_OTHER;
+		case BUILDING_UNKNOWN:
+		default:
+			return BuildingType_B_UNKNOWN;
 	}
 }
 
@@ -115,10 +131,9 @@ static bool encode_roads(pb_ostream_t *stream, const pb_field_t *field, void * c
 	struct road road = {0};
 	vec_foreach(&world->roads, road, i) {
 		Road r = Road_init_zero;
-		r.type = RoadType_MOTORWAY;
+		r.type = convert_road_type(road.type);
 		r.name.funcs.encode = encode_string;
 		r.name.arg = road.name;
-		r.type = convert_road_type(road.type);
 		r.segments.funcs.encode = encode_points;
 		r.segments.arg = &road.segments;
 
@@ -139,6 +154,7 @@ static bool encode_buildings(pb_ostream_t *stream, const pb_field_t *field, void
 	struct building building = {0};
 	vec_foreach(&world->buildings, building, i) {
 		Building b = Building_init_zero;
+		b.type = convert_building_type(building.type);
 		b.points.funcs.encode = encode_points;
 		b.points.arg = &building.points;
 

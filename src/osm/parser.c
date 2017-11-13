@@ -257,8 +257,8 @@ static void make_segments_relative(struct parse_ctx *ctx, point to_subtract) {
 
 void make_coords_relative(struct parse_ctx *ctx) {
 	point min = {
-		.x = UINT_MAX,
-		.y = UINT_MAX,
+		.x = INT_MAX,
+		.y = INT_MAX,
 	};
 	point max = {
 		.x = 0,
@@ -266,18 +266,32 @@ void make_coords_relative(struct parse_ctx *ctx) {
 	};
 
 	// find bounds
-	struct node *node = NULL;
-	HASHMAP_FOR_EACH(node_map, node, ctx->nodes) {
-		min.x = fmin(min.x, node->pos.x);
-		min.y = fmin(min.y, node->pos.y);
-		max.x = fmax(max.x, node->pos.x);
-		max.y = fmax(max.y, node->pos.y);
+	struct node node = {0};
+	struct node *pnode = &node;
+	struct way *way = NULL;
+	HASHMAP_FOR_EACH(way_map, way, ctx->ways) {
+		if (way->way_type == WAY_UNKNOWN)
+			continue;
+
+		int i = 0;
+		id id = 0;
+		vec_foreach(&way->nodes, id, i) {
+			node.id = id;
+			pnode = &node;
+			if (node_mapFind(&ctx->nodes, &pnode)) {
+				min.x = fmin(min.x, pnode->pos.x);
+				min.y = fmin(min.y, pnode->pos.y);
+				max.x = fmax(max.x, pnode->pos.x);
+				max.y = fmax(max.y, pnode->pos.y);
+			}
+
+		}
 	} HASHMAP_FOR_EACH_END
 
 	// make all points relative
-	HASHMAP_FOR_EACH(node_map, node, ctx->nodes) {
-		node->pos.x -= min.x;
-		node->pos.y -= min.y;
+	HASHMAP_FOR_EACH(node_map, pnode, ctx->nodes) {
+		pnode->pos.x -= min.x;
+		pnode->pos.y -= min.y;
 	} HASHMAP_FOR_EACH_END
 
 	// update all buildings and roads
@@ -419,6 +433,74 @@ static enum road_type parse_road_type(const char *s) {
 	else return ROAD_UNKNOWN;
 }
 
+static enum building_type parse_building_type(const char *s) {
+	if (strcmp(s, "apartments") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "farm") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "hotel") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "house") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "detached") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "residential") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "dormitory") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "terrace") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "houseboat") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "bungalow") == 0) return BUILDING_ACCOMODATION;
+	else if (strcmp(s, "static_caravan") == 0) return BUILDING_ACCOMODATION;
+
+	else if (strcmp(s, "commercial") == 0) return BUILDING_COMMERCIAL;
+	else if (strcmp(s, "office") == 0) return BUILDING_COMMERCIAL;
+	else if (strcmp(s, "industrial") == 0) return BUILDING_COMMERCIAL;
+	else if (strcmp(s, "warehouse") == 0) return BUILDING_COMMERCIAL;
+	else if (strcmp(s, "kiosk") == 0) return BUILDING_COMMERCIAL;
+
+	else if (strcmp(s, "bakehouse") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "cathedral") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "chapel") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "church") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "kindergarten") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "mosque") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "temple") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "synagogue") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "shrine") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "civic") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "hospital") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "school") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "stadium") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "train_station") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "transportation") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "university") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "grandstand") == 0) return BUILDING_CIVIC;
+	else if (strcmp(s, "public") == 0) return BUILDING_CIVIC;
+
+	// TODO other or unknown here?
+	else if (strcmp(s, "barn") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "bridge") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "bunker") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "cabin") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "carport") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "conservatory") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "construction") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "cowshed") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "digester") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "farm_auxiliary") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "garage") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "garages") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "garbage_shed") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "greenhouse") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "hangar") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "hut") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "pavilion") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "parking") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "roof") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "shed") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "stable") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "sty") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "transformer_tower") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "service") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "ruins") == 0) return BUILDING_OTHER;
+	else if (strcmp(s, "yes") == 0) return BUILDING_OTHER;
+
+	else return BUILDING_UNKNOWN;
+}
 
 ATTR_VISITOR(way_visitor) {
 
@@ -437,18 +519,17 @@ static enum way_type classify_way(struct parse_ctx *ctx, struct way *way) {
 	tag.key = "highway";
 	if (tag_mapFind(&ctx->current_tags, &ptag)) {
 		enum road_type rt = parse_road_type(ptag->val);
-		if (rt != ROAD_UNKNOWN) {
-			way->way_type = WAY_ROAD;
-			way->que.road.type = rt;
-			return WAY_ROAD;
-		}
+		way->way_type = WAY_ROAD;
+		way->que.road.type = rt;
+		return WAY_ROAD;
 	}
 
 	tag.key = "building";
 	if (tag_mapFind(&ctx->current_tags, &ptag)) {
-			way->way_type = WAY_BUILDING;
-			return WAY_BUILDING;
-
+		enum building_type bt = parse_building_type(ptag->val);
+		way->way_type = WAY_BUILDING;
+		way->que.building.type = bt;
+		return WAY_BUILDING;
 	}
 
 	return way->way_type = WAY_UNKNOWN;

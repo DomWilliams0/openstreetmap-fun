@@ -13,12 +13,12 @@ message Point {
 }
 
 enum RoadType {
-	UNKNOWN = 0;
-	MOTORWAY = 1;
-	PRIMARY = 2;
-	SECONDARY = 3;
-	MINOR = 4;
-	PEDESTRIAN = 5;
+	R_UNKNOWN = 0;
+	R_MOTORWAY = 1;
+	R_PRIMARY = 2;
+	R_SECONDARY = 3;
+	R_MINOR = 4;
+	R_PEDESTRIAN = 5;
 }
 
 message Road {
@@ -27,6 +27,15 @@ message Road {
 	repeated Point segments = 3;
 }
 
+enum BuildingType {
+	B_UNKNOWN = 0;
+	B_ACCOMODATION = 1;
+	B_COMMERCIAL = 2;
+	B_CIVIC = 3;
+	B_OTHER = 4;
+};
+
 message Building {
-	repeated Point points = 1;;
+	BuildingType type = 1;
+	repeated Point points = 2;
 }
