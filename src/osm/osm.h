@@ -35,7 +35,8 @@ enum road_type {
 	ROAD_PRIMARY,
 	ROAD_SECONDARY,
 	ROAD_MINOR,
-	ROAD_PEDESTRIAN // TODO footpath is not a road!
+	ROAD_RESIDENTIAL,
+	ROAD_PEDESTRIAN
 };
 
 enum building_type {

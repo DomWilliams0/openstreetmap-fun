@@ -100,6 +100,8 @@ static RoadType convert_road_type(enum road_type rt) {
 			return RoadType_R_SECONDARY;
 		case ROAD_MINOR:
 			return RoadType_R_MINOR;
+		case ROAD_RESIDENTIAL:
+			return RoadType_R_RESIDENTIAL;
 		case ROAD_PEDESTRIAN:
 			return RoadType_R_PEDESTRIAN;
 		case ROAD_UNKNOWN:

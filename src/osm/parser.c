@@ -408,7 +408,6 @@ int parse_node_ref_tag(struct parse_ctx *ctx) {
 }
 
 static enum road_type parse_road_type(const char *s) {
-	// big roads
 	if (strcmp(s, "motorway") == 0) return ROAD_MOTORWAY;
 	else if (strcmp(s, "motorway_link") == 0) return ROAD_MOTORWAY;
 	else if (strcmp(s, "primary_link") == 0) return ROAD_PRIMARY;
@@ -416,19 +415,24 @@ static enum road_type parse_road_type(const char *s) {
 	else if (strcmp(s, "trunk") == 0) return ROAD_PRIMARY;
 	else if (strcmp(s, "trunk_link") == 0) return ROAD_PRIMARY;
 
-	// smaller roads
 	else if (strcmp(s, "secondary_link") == 0) return ROAD_SECONDARY;
 	else if (strcmp(s, "secondary") == 0) return ROAD_SECONDARY;
 	else if (strcmp(s, "tertiary") == 0) return ROAD_SECONDARY;
 	else if (strcmp(s, "tertiary_link") == 0) return ROAD_SECONDARY;
-	else if (strcmp(s, "living_street") == 0) return ROAD_MINOR;
+
 	else if (strcmp(s, "unclassified") == 0) return ROAD_MINOR;
 	else if (strcmp(s, "minor") == 0) return ROAD_MINOR;
-	else if (strcmp(s, "residential") == 0) return ROAD_MINOR;
 
-	// pedestrians
+
+	else if (strcmp(s, "residential") == 0) return ROAD_RESIDENTIAL;
+	else if (strcmp(s, "living_street") == 0) return ROAD_RESIDENTIAL;
+
 	else if (strcmp(s, "pedestrian") == 0) return ROAD_PEDESTRIAN;
 	else if (strcmp(s, "footway") == 0) return ROAD_PEDESTRIAN;
+	else if (strcmp(s, "steps") == 0) return ROAD_PEDESTRIAN;
+	else if (strcmp(s, "path") == 0) return ROAD_PEDESTRIAN;
+	else if (strcmp(s, "cycleway") == 0) return ROAD_PEDESTRIAN;
+	else if (strcmp(s, "bridleway") == 0) return ROAD_PEDESTRIAN;
 
 	else return ROAD_UNKNOWN;
 }
@@ -524,6 +528,7 @@ static enum way_type classify_way(struct parse_ctx *ctx, struct way *way) {
 		return WAY_ROAD;
 	}
 
+/*
 	tag.key = "building";
 	if (tag_mapFind(&ctx->current_tags, &ptag)) {
 		enum building_type bt = parse_building_type(ptag->val);
@@ -531,6 +536,7 @@ static enum way_type classify_way(struct parse_ctx *ctx, struct way *way) {
 		way->que.building.type = bt;
 		return WAY_BUILDING;
 	}
+*/
 
 	return way->way_type = WAY_UNKNOWN;
 }

@@ -18,7 +18,8 @@ enum RoadType {
 	R_PRIMARY = 2;
 	R_SECONDARY = 3;
 	R_MINOR = 4;
-	R_PEDESTRIAN = 5;
+	R_RESIDENTIAL = 5;
+	R_PEDESTRIAN = 6;
 }
 
 message Road {
