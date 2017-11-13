@@ -238,6 +238,7 @@ static void make_segments_relative(struct parse_ctx *ctx, point to_subtract) {
 	int i = 0, j = 0;
 	struct road *r = NULL;
 	struct building *b = NULL;
+	struct land_use *l = NULL;
 	point *p = NULL;
 
 	vec_foreach_ptr(&ctx->out.roads, r, i) {
@@ -249,6 +250,13 @@ static void make_segments_relative(struct parse_ctx *ctx, point to_subtract) {
 
 	vec_foreach_ptr(&ctx->out.buildings, b, i) {
 		vec_foreach_ptr(&b->points, p, j) {
+			p->x -= to_subtract.x;
+			p->y -= to_subtract.y;
+		}
+	}
+
+	vec_foreach_ptr(&ctx->out.land_uses, l, i) {
+		vec_foreach_ptr(&l->points, p, j) {
 			p->x -= to_subtract.x;
 			p->y -= to_subtract.y;
 		}
@@ -505,6 +513,43 @@ static enum building_type parse_building_type(const char *s) {
 
 	else return BUILDING_UNKNOWN;
 }
+static enum land_use_type parse_landuse(const char *s) {
+
+	if (strcmp(s, "residential") == 0) return LANDUSE_RESIDENTIAL;
+
+	else if (strcmp(s, "commercial") == 0) return LANDUSE_COMMERCIAL;
+	else if (strcmp(s, "retail") == 0) return LANDUSE_COMMERCIAL;
+
+	else if (strcmp(s, "conservation") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "plant_nursery") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "aquaculture") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "farmland") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "farmyard") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "orchard") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "vineyard") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "greenhouse_horticulture") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "logging") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "farm") == 0) return LANDUSE_AGRICULTURE;
+	else if (strcmp(s, "allotments") == 0) return LANDUSE_AGRICULTURE;
+
+	else if (strcmp(s, "industrial") == 0) return LANDUSE_INDUSTRIAL;
+	else if (strcmp(s, "quarry") == 0) return LANDUSE_INDUSTRIAL;
+	else if (strcmp(s, "construction") == 0) return LANDUSE_INDUSTRIAL;
+
+	else if (strcmp(s, "cemetery") == 0) return LANDUSE_GREEN;
+	else if (strcmp(s, "forest") == 0) return LANDUSE_GREEN;
+	else if (strcmp(s, "grass") == 0) return LANDUSE_GREEN;
+	else if (strcmp(s, "meadow") == 0) return LANDUSE_GREEN;
+	else if (strcmp(s, "village_green") == 0) return LANDUSE_GREEN;
+	else if (strcmp(s, "recreation_ground") == 0) return LANDUSE_GREEN;
+	else if (strcmp(s, "greenfield") == 0) return LANDUSE_GREEN;
+	else if (strcmp(s, "field") == 0) return LANDUSE_GREEN;
+
+	else if (strcmp(s, "reservoir") == 0) return LANDUSE_WATER;
+	else if (strcmp(s, "basin") == 0) return LANDUSE_WATER;
+
+	else return LANDUSE_UNKNOWN;
+}
 
 ATTR_VISITOR(way_visitor) {
 
@@ -519,6 +564,18 @@ ATTR_VISITOR(way_visitor) {
 static enum way_type classify_way(struct parse_ctx *ctx, struct way *way) {
 	struct tag tag = {0};
 	struct tag *ptag = &tag;
+
+	tag.key = "landuse";
+	if (tag_mapFind(&ctx->current_tags, &ptag)) {
+		enum land_use_type lu = parse_landuse(ptag->val);
+		if (lu != LANDUSE_UNKNOWN) {
+			way->way_type = WAY_LANDUSE;
+			way->que.land_use.type = lu;
+			return WAY_LANDUSE;
+		}
+	}
+
+
 
 	tag.key = "highway";
 	if (tag_mapFind(&ctx->current_tags, &ptag)) {
@@ -589,12 +646,21 @@ int add_way_to_context(struct parse_ctx *ctx) {
 		ret = vec_push(&ctx->out.roads, way->que.road) == 0 ? CRACKING : ERR_MEM;
 	}
 
+	// land use
+	else if (type == WAY_LANDUSE) {
+		if ((ret = add_node_points(ctx, way, &way->que.land_use.points)) != CRACKING)
+			return ret;
+		ret = vec_push(&ctx->out.land_uses, way->que.land_use) == 0 ? CRACKING : ERR_MEM;
+	}
+
 	// building
+/*
 	else if (type == WAY_BUILDING) {
 		if ((ret = add_node_points(ctx, way, &way->que.building.points)) != CRACKING)
 			return ret;
 		ret = vec_push(&ctx->out.buildings, way->que.building) == 0 ? CRACKING : ERR_MEM;
 	}
+*/
 
 	// unset current
 	clear_current(ctx);

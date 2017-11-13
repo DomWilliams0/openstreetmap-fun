@@ -5,6 +5,7 @@ message World {
 	uint32 bounds_y = 2;
 	repeated Road roads = 3;
 	repeated Building buildings = 4;
+	repeated LandUse land_uses = 5;
 }
 
 message Point {
@@ -38,5 +39,20 @@ enum BuildingType {
 
 message Building {
 	BuildingType type = 1;
+	repeated Point points = 2;
+}
+
+enum LandUseType {
+	LU_UNKNOWN = 0;
+	LU_RESIDENTIAL = 1;
+	LU_COMMERCIAL = 2;
+	LU_AGRICULTURE = 3;
+	LU_INDUSTRIAL = 4;
+	LU_GREEN = 5;
+	LU_WATER = 6;
+};
+
+message LandUse {
+	LandUseType type = 1;
 	repeated Point points = 2;
 }

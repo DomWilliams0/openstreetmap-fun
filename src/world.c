@@ -32,6 +32,14 @@ void free_world(struct world *world) {
 
 	if (world->buildings.data != NULL)
 		vec_deinit(&world->buildings);
+
+	struct land_use l = {0};
+	vec_foreach(&world->land_uses, l, i) {
+		if (l.points.data != NULL)
+			vec_deinit(&l.points);
+	}
+	if (world->land_uses.data != NULL)
+		vec_deinit(&world->land_uses);
 }
 
 void debug_print(struct world *world) {
@@ -52,6 +60,13 @@ void debug_print(struct world *world) {
 	struct building b = {0};
 	vec_foreach(&world->buildings, b, i) {
 		printf("\t%d points\n", b.points.length);
+	}
+
+	printf("%d land_uses:\n", world->land_uses.length);
+
+	struct land_use l = {0};
+	vec_foreach(&world->land_uses, l, i) {
+		printf("\t%d points\n", l.points.length);
 	}
 }
 
@@ -126,6 +141,26 @@ static BuildingType convert_building_type(enum building_type bt) {
 	}
 }
 
+static LandUseType convert_land_use_type(enum land_use_type lu) {
+	switch (lu) {
+		case LANDUSE_RESIDENTIAL:
+			return LandUseType_LU_RESIDENTIAL;
+		case LANDUSE_COMMERCIAL:
+			return LandUseType_LU_COMMERCIAL;
+		case LANDUSE_AGRICULTURE:
+			return LandUseType_LU_AGRICULTURE;
+		case LANDUSE_INDUSTRIAL:
+			return LandUseType_LU_INDUSTRIAL;
+		case LANDUSE_GREEN:
+			return LandUseType_LU_GREEN;
+		case LANDUSE_WATER:
+			return LandUseType_LU_WATER;
+		case LANDUSE_UNKNOWN:
+		default:
+			return LandUseType_LU_UNKNOWN;
+	}
+}
+
 static bool encode_roads(pb_ostream_t *stream, const pb_field_t *field, void * const *arg) {
 	struct world *world = (struct world *)*arg;
 
@@ -170,6 +205,28 @@ static bool encode_buildings(pb_ostream_t *stream, const pb_field_t *field, void
 	return true;
 }
 
+static bool encode_land_uses(pb_ostream_t *stream, const pb_field_t *field, void * const *arg) {
+	struct world *world = (struct world *)*arg;
+
+	int i = 0;
+	struct land_use land_use = {0};
+	vec_foreach(&world->land_uses, land_use, i) {
+		LandUse l = LandUse_init_zero;
+
+		l.type = convert_land_use_type(land_use.type);
+		l.points.funcs.encode = encode_points;
+		l.points.arg = &land_use.points;
+
+		if (!pb_encode_tag_for_field(stream, field))
+			return false;
+
+		if (!pb_encode_submessage(stream, LandUse_fields, &l))
+			return false;
+	}
+
+	return true;
+}
+
 static bool dump_to_file_safe(struct world *world, FILE *file) {
 
 	World msg = World_init_zero;
@@ -181,6 +238,9 @@ static bool dump_to_file_safe(struct world *world, FILE *file) {
 
 	msg.buildings.funcs.encode = encode_buildings;
 	msg.buildings.arg = world;
+
+	msg.land_uses.funcs.encode = encode_land_uses;
+	msg.land_uses.arg = world;
 
 	pb_ostream_t os;
 	os.callback = write_callback;

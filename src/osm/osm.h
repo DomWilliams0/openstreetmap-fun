@@ -26,7 +26,8 @@ struct node {
 enum way_type {
 	WAY_UNKNOWN = 0,
 	WAY_ROAD,
-	WAY_BUILDING
+	WAY_BUILDING,
+	WAY_LANDUSE
 };
 
 enum road_type {
@@ -47,6 +48,16 @@ enum building_type {
 	BUILDING_OTHER
 };
 
+enum land_use_type {
+	LANDUSE_UNKNOWN = 0,
+	LANDUSE_RESIDENTIAL,
+	LANDUSE_COMMERCIAL,
+	LANDUSE_AGRICULTURE,
+	LANDUSE_INDUSTRIAL,
+	LANDUSE_GREEN,
+	LANDUSE_WATER
+};
+
 const char *road_type_to_string(enum road_type rt);
 
 struct road {
@@ -60,6 +71,10 @@ struct building {
 	vec_point_t points;
 };
 
+struct land_use {
+	enum land_use_type type;
+	vec_point_t points;
+};
 
 struct way {
 	id id;
@@ -69,6 +84,7 @@ struct way {
 	union {
 		struct road road;
 		struct building building;
+		struct land_use land_use;
 	} que;
 };
 
