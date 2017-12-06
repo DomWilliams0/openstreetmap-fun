@@ -10,6 +10,7 @@
 
 #include "osm.h"
 #include "world.h"
+#include "parser.h"
 
 FILE *err_stream = NULL; // if NULL, defaults to stderr
 
@@ -87,11 +88,6 @@ struct xml_tag parse_tag(char *tag_in) {
 	return out;
 }
 
-
-int open_file(struct parse_ctx *ctx, char *file_path) {
-	ctx->f = fopen(file_path, "r");
-	return ctx->f != NULL ? CRACKING : ERR_FILE_NOT_FOUND;
-}
 
 int find_char(char *s, char c) {
 	int i = 0;
@@ -723,20 +719,22 @@ void free_context(struct parse_ctx *ctx) {
 	way_mapDestroy(&ctx->ways);
 }
 
-int parse_osm(char *file_path, struct world *out) {
+int parse_osm(struct osm_source *src, struct world *out) {
 	if (err_stream == NULL)
 		err_stream = stderr;
-
 
 	struct parse_ctx ctx = {0};
 	ctx.current_tag = TAG_UNKNOWN;
 	init_world(&ctx.out);
 
-	int ret = CRACKING;
+	int ret;
+	if (src->is_file) {
+		ret = (ctx.f = fopen(src->u.file_path, "r")) == NULL ? ERR_FILE_NOT_FOUND : CRACKING;
+	} else {
+        ret = (ctx.f = fmemopen(src->u.buf, src->u.n, "r")) == NULL ? ERR_IO : CRACKING;
+	}
 
-	// open file
-	if ((ret = open_file(&ctx, file_path)) == CRACKING) {
-
+	if (ret == CRACKING) {
 		while (true) {
 			if (read_line(&ctx) != CRACKING) break;
 

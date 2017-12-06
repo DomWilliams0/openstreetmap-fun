@@ -1,12 +1,17 @@
+#include <osm/parser.h>
 #include "acutest.h"
 #include "error.h"
 #include "world.h"
-#include "osm/osm.h"
 #include "osm/parser.h"
+#include "osm/osm.h"
 
 int create_test_world(struct world *out) {
 	err_stream = fopen("/dev/null", "w");
-	return parse_osm("tests/example.osm", out);
+    struct osm_source src;
+	src.is_file = 1;
+	src.u.file_path = "tests/example.osm";
+
+	return parse_osm(&src, out);
 }
 
 void test_roads() {

@@ -9,7 +9,11 @@ int main(int argc, char *argv[]) {
 	char *file = argc >= 2 ? argv[1] : "../xmls/place.xml";
 
 	struct world world;
-	int ret = parse_osm(file, &world);
+	struct osm_source src = {
+			.is_file = 1,
+			.u.file_path = file
+	};
+	int ret = parse_osm(&src, &world);
 
 	if (ret != CRACKING) {
 		printf("error: %s\n", error_get_message(ret));
