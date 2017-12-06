@@ -233,19 +233,11 @@ void convert_to_pixels(double lat, double lon, point *out) {
 static void make_segments_relative(struct parse_ctx *ctx, point to_subtract) {
 	int i = 0, j = 0;
 	struct road *r = NULL;
-	struct building *b = NULL;
 	struct land_use *l = NULL;
 	point *p = NULL;
 
 	vec_foreach_ptr(&ctx->out.roads, r, i) {
 		vec_foreach_ptr(&r->segments, p, j) {
-			p->x -= to_subtract.x;
-			p->y -= to_subtract.y;
-		}
-	}
-
-	vec_foreach_ptr(&ctx->out.buildings, b, i) {
-		vec_foreach_ptr(&b->points, p, j) {
 			p->x -= to_subtract.x;
 			p->y -= to_subtract.y;
 		}
@@ -441,74 +433,6 @@ static enum road_type parse_road_type(const char *s) {
 	else return ROAD_UNKNOWN;
 }
 
-static enum building_type parse_building_type(const char *s) {
-	if (strcmp(s, "apartments") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "farm") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "hotel") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "house") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "detached") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "residential") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "dormitory") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "terrace") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "houseboat") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "bungalow") == 0) return BUILDING_ACCOMODATION;
-	else if (strcmp(s, "static_caravan") == 0) return BUILDING_ACCOMODATION;
-
-	else if (strcmp(s, "commercial") == 0) return BUILDING_COMMERCIAL;
-	else if (strcmp(s, "office") == 0) return BUILDING_COMMERCIAL;
-	else if (strcmp(s, "industrial") == 0) return BUILDING_COMMERCIAL;
-	else if (strcmp(s, "warehouse") == 0) return BUILDING_COMMERCIAL;
-	else if (strcmp(s, "kiosk") == 0) return BUILDING_COMMERCIAL;
-
-	else if (strcmp(s, "bakehouse") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "cathedral") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "chapel") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "church") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "kindergarten") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "mosque") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "temple") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "synagogue") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "shrine") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "civic") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "hospital") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "school") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "stadium") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "train_station") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "transportation") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "university") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "grandstand") == 0) return BUILDING_CIVIC;
-	else if (strcmp(s, "public") == 0) return BUILDING_CIVIC;
-
-	// TODO other or unknown here?
-	else if (strcmp(s, "barn") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "bridge") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "bunker") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "cabin") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "carport") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "conservatory") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "construction") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "cowshed") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "digester") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "farm_auxiliary") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "garage") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "garages") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "garbage_shed") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "greenhouse") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "hangar") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "hut") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "pavilion") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "parking") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "roof") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "shed") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "stable") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "sty") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "transformer_tower") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "service") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "ruins") == 0) return BUILDING_OTHER;
-	else if (strcmp(s, "yes") == 0) return BUILDING_OTHER;
-
-	else return BUILDING_UNKNOWN;
-}
 static enum land_use_type parse_landuse(const char *s) {
 
 	if (strcmp(s, "residential") == 0) return LANDUSE_RESIDENTIAL;

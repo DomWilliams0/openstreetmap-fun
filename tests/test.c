@@ -36,25 +36,6 @@ void test_roads() {
 	free_world(&w);
 }
 
-void test_buildings() {
-	struct world w;
-	TEST_CHECK(create_test_world(&w) == CRACKING);
-
-	TEST_CHECK(w.buildings.length == 1);
-	struct building b = w.buildings.data[0];
-	TEST_CHECK(b.points.length == 2);
-
-	{
-		point cmp = {174, 19};
-		TEST_CHECK(b.points.data[0].x == cmp.x && b.points.data[0].y == cmp.y);
-	}
-	{
-		point cmp = {179, 23};
-		TEST_CHECK(b.points.data[1].x == cmp.x && b.points.data[1].y == cmp.y);
-	}
-	free_world(&w);
-}
-
 void test_bounds() {
 	struct world w;
 	TEST_CHECK(create_test_world(&w) == CRACKING);
@@ -68,6 +49,5 @@ void test_bounds() {
 TEST_LIST = {
 	{ "bounds", test_bounds },
 	{ "road discovery", test_roads },
-	{ "building discovery", test_buildings },
 	{ NULL, NULL }
 };

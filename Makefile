@@ -31,7 +31,6 @@ SRCS       := $(shell find $(SRC) -type f -name '*.c')
 SRCS_TESTS := $(shell find $(TEST) -type f -name '*.c')
 SRCS_LIB   := lib/vec/src/vec.c
 SRC_MAIN   := $(SRC)/main.c
-SRCS       := $(filter-out $(SRC_MAIN),$(SRCS) $(SRCS_LIB))
 
 ifneq ($(NO_PROTOBUF),1)
 	SRCS_PROTO := $(shell find $(PROTO) -type f -name '*.proto')
@@ -39,6 +38,8 @@ ifneq ($(NO_PROTOBUF),1)
 else
 	SRCS_PROTO :=
 endif
+
+SRCS       := $(filter-out $(SRC_MAIN),$(SRCS) $(SRCS_LIB))
 
 OBJS       := $(addprefix $(OBJ)/,$(notdir $(SRCS:%.c=%.o)))
 PROTO_OBJ  := $(addprefix $(OBJ)/,$(notdir $(SRCS_PROTO:%.proto=%.pb.o)))

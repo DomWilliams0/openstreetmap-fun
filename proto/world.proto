@@ -4,7 +4,6 @@ message World {
 	uint32 bounds_x = 1;
 	uint32 bounds_y = 2;
 	repeated Road roads = 3;
-	repeated Building buildings = 4;
 	repeated LandUse land_uses = 5;
 }
 
@@ -27,19 +26,6 @@ message Road {
 	RoadType type = 1;
 	string name = 2;
 	repeated Point segments = 3;
-}
-
-enum BuildingType {
-	B_UNKNOWN = 0;
-	B_ACCOMODATION = 1;
-	B_COMMERCIAL = 2;
-	B_CIVIC = 3;
-	B_OTHER = 4;
-};
-
-message Building {
-	BuildingType type = 1;
-	repeated Point points = 2;
 }
 
 enum LandUseType {
