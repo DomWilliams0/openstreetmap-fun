@@ -21,13 +21,24 @@ ifeq ($(RELEASE), 0)
 	CFLAGS += -DDEBUG -O0 -g
 endif
 
+NO_PROTOBUF ?= 0
+ifeq ($(NO_PROTOBUF),1)
+	CFLAGS += -DNO_PROTOBUF
+endif
+
 INCS       := $(shell find $(SRC) -type f -name '*.h')
 SRCS       := $(shell find $(SRC) -type f -name '*.c')
-SRCS_PROTO := $(shell find $(PROTO) -type f -name '*.proto')
 SRCS_TESTS := $(shell find $(TEST) -type f -name '*.c')
-SRCS_LIB   := lib/vec/src/vec.c lib/nanopb/pb_common.c lib/nanopb/pb_encode.c
+SRCS_LIB   := lib/vec/src/vec.c
 SRC_MAIN   := $(SRC)/main.c
 SRCS       := $(filter-out $(SRC_MAIN),$(SRCS) $(SRCS_LIB))
+
+ifneq ($(NO_PROTOBUF),1)
+	SRCS_PROTO := $(shell find $(PROTO) -type f -name '*.proto')
+	SRCS_LIB   += lib/nanopb/pb_common.c lib/nanopb/pb_encode.c
+else
+	SRCS_PROTO :=
+endif
 
 OBJS       := $(addprefix $(OBJ)/,$(notdir $(SRCS:%.c=%.o)))
 PROTO_OBJ  := $(addprefix $(OBJ)/,$(notdir $(SRCS_PROTO:%.proto=%.pb.o)))

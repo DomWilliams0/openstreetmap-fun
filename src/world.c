@@ -4,7 +4,10 @@
 #include "world.h"
 #include "error.h"
 #include "osm/osm.h"
+
+#ifndef NO_PROTOBUF
 #include "world.pb.h"
+#endif
 
 int init_world(struct world *world) {
 	vec_init(&world->roads);
@@ -70,6 +73,7 @@ void debug_print(struct world *world) {
 	}
 }
 
+#ifndef NO_PROTOBUF
 static bool write_callback(pb_ostream_t *stream, const uint8_t *buf, size_t count) {
 	return fwrite(buf, 1, count, stream->state) == count;
 }
@@ -249,8 +253,11 @@ static bool dump_to_file_safe(struct world *world, FILE *file) {
 
 	return pb_encode(&os, World_fields, &msg);
 }
+#endif
 
 bool dump_to_file(struct world *world, char *path) {
+
+#ifndef NO_PROTOBUF
 	FILE *file = fopen(path, "wb");
 	if (file == NULL) {
 		perror("fopen");
@@ -262,4 +269,9 @@ bool dump_to_file(struct world *world, char *path) {
 	fclose(file);
 
 	return ret;
+#else
+	(void)(world);
+	(void)(path);
+    return false;
+#endif
 }
