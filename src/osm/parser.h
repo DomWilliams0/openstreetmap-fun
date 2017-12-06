@@ -18,18 +18,8 @@ typedef struct {
 
 typedef vec_t(point) vec_point_t;
 
-struct osm_source {
-	int is_file;
-    union {
-        char *file_path;
-
-        struct {
-			char *buf;
-			size_t n;
-		};
-	} u;
-};
-int parse_osm(struct osm_source *src, struct world *out);
+int parse_osm_from_file(const char *path, struct world *out);
+int parse_osm_from_buffer(void *buffer, size_t len, struct world *out);
 
 #endif
 

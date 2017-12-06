@@ -643,7 +643,19 @@ void free_context(struct parse_ctx *ctx) {
 	way_mapDestroy(&ctx->ways);
 }
 
-int parse_osm(struct osm_source *src, struct world *out) {
+struct osm_source {
+	int is_file;
+	union {
+		const char *file_path;
+
+		struct {
+			void *buf;
+			size_t n;
+		};
+	} u;
+};
+
+static int parse_osm(struct osm_source *src, struct world *out) {
 	if (err_stream == NULL)
 		err_stream = stderr;
 
@@ -700,6 +712,24 @@ int parse_osm(struct osm_source *src, struct world *out) {
 	*out = ctx.out;
 	free_context(&ctx);
 	return ret;
+}
+
+int parse_osm_from_file(const char *path, struct world *out) {
+    struct osm_source src = {
+            .is_file = 1,
+			.u.file_path = path
+	};
+	return parse_osm(&src, out);
+}
+
+int parse_osm_from_buffer(void *buffer, size_t len, struct world *out) {
+	struct osm_source src = {
+			.is_file = 0,
+			.u.buf = buffer,
+			.u.n = len
+	};
+
+	return parse_osm(&src, out);
 }
 
 const char *road_type_lookup[] = {
