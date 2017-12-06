@@ -563,6 +563,8 @@ int add_way_to_context(struct parse_ctx *ctx) {
 		if ((ret = add_node_points(ctx, way, &way->que.road.segments)) != CRACKING)
 			return ret;
 
+		way->que.road.id = way->id;
+
 		ret = vec_push(&ctx->out.roads, way->que.road) == 0 ? CRACKING : ERR_MEM;
 	}
 
@@ -570,6 +572,8 @@ int add_way_to_context(struct parse_ctx *ctx) {
 	else if (type == WAY_LANDUSE) {
 		if ((ret = add_node_points(ctx, way, &way->que.land_use.points)) != CRACKING)
 			return ret;
+
+		way->que.land_use.id = way->id;
 		ret = vec_push(&ctx->out.land_uses, way->que.land_use) == 0 ? CRACKING : ERR_MEM;
 	}
 

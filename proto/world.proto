@@ -26,6 +26,7 @@ message Road {
 	RoadType type = 1;
 	string name = 2;
 	repeated Point segments = 3;
+	uint64 id = 4;
 }
 
 enum LandUseType {
@@ -41,4 +42,5 @@ enum LandUseType {
 message LandUse {
 	LandUseType type = 1;
 	repeated Point points = 2;
+	uint64 id = 3;
 }

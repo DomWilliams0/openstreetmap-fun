@@ -43,7 +43,7 @@ void debug_print(struct world *world) {
 	int i = 0;
 	struct road r = {0};
 	vec_foreach(&world->roads, r, i) {
-		printf("\t%s with %d segments", road_type_to_string(r.type), r.segments.length);
+		printf("\t%ld - %s with %d segments", r.id, road_type_to_string(r.type), r.segments.length);
 		if (r.name != NULL)
 			printf(" - %s", r.name);
 		printf("\n");
@@ -53,7 +53,7 @@ void debug_print(struct world *world) {
 
 	struct land_use l = {0};
 	vec_foreach(&world->land_uses, l, i) {
-		printf("\t%d points\n", l.points.length);
+		printf("\t%ld - %d points\n", l.id, l.points.length);
 	}
 }
 
@@ -140,6 +140,7 @@ static bool encode_roads(pb_ostream_t *stream, const pb_field_t *field, void * c
 	struct road road = {0};
 	vec_foreach(&world->roads, road, i) {
 		Road r = Road_init_zero;
+		r.id = road.id;
 		r.type = convert_road_type(road.type);
 		r.name.funcs.encode = encode_string;
 		r.name.arg = road.name;
@@ -164,6 +165,7 @@ static bool encode_land_uses(pb_ostream_t *stream, const pb_field_t *field, void
 	vec_foreach(&world->land_uses, land_use, i) {
 		LandUse l = LandUse_init_zero;
 
+		l.id = land_use.id;
 		l.type = convert_land_use_type(land_use.type);
 		l.points.funcs.encode = encode_points;
 		l.points.arg = &land_use.points;

@@ -61,6 +61,7 @@ enum land_use_type {
 const char *road_type_to_string(enum road_type rt);
 
 struct road {
+	id id;
 	enum road_type type;
 	vec_point_t segments;
 	char *name;
@@ -72,6 +73,7 @@ struct building {
 };
 
 struct land_use {
+	id id;
 	enum land_use_type type;
 	vec_point_t points;
 };
