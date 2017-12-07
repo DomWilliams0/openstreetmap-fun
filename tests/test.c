@@ -7,11 +7,7 @@
 
 int create_test_world(struct world *out) {
 	err_stream = fopen("/dev/null", "w");
-    struct osm_source src;
-	src.is_file = 1;
-	src.u.file_path = "tests/example.osm";
-
-	return parse_osm(&src, out);
+	return parse_osm_from_file("tests/example.osm", out);
 }
 
 void test_roads() {
