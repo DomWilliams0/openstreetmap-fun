@@ -219,7 +219,7 @@ int add_node_to_context(struct parse_ctx *ctx) {
 	return ret;
 }
 
-void convert_to_pixels(double lat, double lon, point *out) {
+void convert_latlon_to_pixel(double lat, double lon, point *out) {
 	const int ZOOM = 23;
 	const double N = 1 << ZOOM;
 	const double PI = 3.14159265359;
@@ -346,7 +346,7 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 	node->pos.x = INVALID_COORD;
 	node->pos.y = INVALID_COORD;
 
-	convert_to_pixels(node_lat.lat, node_lat.lon, &node->pos);
+	convert_latlon_to_pixel(node_lat.lat, node_lat.lon, &node->pos);
 
 	// uh oh
 	if (node->id == 0 || node->pos.x == INVALID_COORD || node->pos.y == INVALID_COORD) {
