@@ -219,90 +219,6 @@ int add_node_to_context(struct parse_ctx *ctx) {
 	return ret;
 }
 
-void convert_latlon_to_pixel(double lat, double lon, point *out) {
-	const int ZOOM = 23;
-	const double N = 1 << ZOOM;
-	const double PI = 3.14159265359;
-	const double RAD = PI / 180.0;
-
-	double lat_rad = lat * RAD;
-	out->x = (coord)((lon + 180.0) / 360.0 * N);
-	out->y = (coord)((1.0 - log(tan(lat_rad) + (1.0 / cos(lat_rad))) / PI) / 2.0 * N);
-}
-
-static void make_segments_relative(struct parse_ctx *ctx, point to_subtract) {
-	int i = 0, j = 0;
-	struct road *r = NULL;
-	struct land_use *l = NULL;
-	point *p = NULL;
-
-	vec_foreach_ptr(&ctx->out.roads, r, i) {
-		vec_foreach_ptr(&r->segments, p, j) {
-			p->x -= to_subtract.x;
-			p->y -= to_subtract.y;
-		}
-	}
-
-	vec_foreach_ptr(&ctx->out.land_uses, l, i) {
-		vec_foreach_ptr(&l->points, p, j) {
-			p->x -= to_subtract.x;
-			p->y -= to_subtract.y;
-		}
-	}
-}
-
-void make_coords_relative(struct parse_ctx *ctx) {
-	point min = {
-		.x = INT_MAX,
-		.y = INT_MAX,
-	};
-	point max = {
-		.x = 0,
-		.y = 0,
-	};
-
-	// find bounds
-	struct node node = {0};
-	struct node *pnode = &node;
-	struct way *way = NULL;
-	HASHMAP_FOR_EACH(way_map, way, ctx->ways) {
-		if (way->way_type == WAY_UNKNOWN)
-			continue;
-
-		int i = 0;
-		id id = 0;
-		vec_foreach(&way->nodes, id, i) {
-			node.id = id;
-			pnode = &node;
-			if (node_mapFind(&ctx->nodes, &pnode)) {
-				min.x = fmin(min.x, pnode->pos.x);
-				min.y = fmin(min.y, pnode->pos.y);
-				max.x = fmax(max.x, pnode->pos.x);
-				max.y = fmax(max.y, pnode->pos.y);
-			}
-
-		}
-	} HASHMAP_FOR_EACH_END
-
-	// make all points relative
-	HASHMAP_FOR_EACH(node_map, pnode, ctx->nodes) {
-		pnode->pos.x -= min.x;
-		pnode->pos.y -= min.y;
-	} HASHMAP_FOR_EACH_END
-
-	// update all buildings and roads
-	// TODO this is awful!
-	make_segments_relative(ctx, min);
-
-	ctx->out.bounds[0] = max.x - min.x;
-	ctx->out.bounds[1] = max.y - min.y;
-}
-
-struct node_lat {
-	id id;
-	double lon, lat;
-};
-
 bool id_to_long(char *s, long *out) {
 	char *str_end;
 	long long_id = strtol(s, &str_end, 10);
@@ -315,18 +231,18 @@ bool id_to_long(char *s, long *out) {
 ATTR_VISITOR(node_visitor) {
 
 	if (strcmp(key, "id") == 0) {
-		if (!id_to_long(val, &((struct node_lat *)data)->id)) {
+		if (!id_to_long(val, &((struct node *)data)->id)) {
 			fprintf(err_stream, "bad node id '%s'\n", val);
 			return;
 		}
 	}
 
 	else if (strcmp(key, "lat") == 0) {
-		((struct node_lat *)data)->lat = strtold(val, NULL);
+		((struct node *)data)->pos.lat = strtold(val, NULL);
 	}
 
 	else if (strcmp(key, "lon") == 0) {
-		((struct node_lat *)data)->lon = strtold(val, NULL);
+		((struct node *)data)->pos.lon = strtold(val, NULL);
 	}
 }
 
@@ -338,21 +254,7 @@ int parse_node_tag(struct parse_ctx *ctx, bool opening) {
 
 	struct node *node = &ctx->que.node;
 
-	struct node_lat node_lat = {0};
-	visit_attributes(ctx->attr_start, node_visitor, &node_lat);
-	node->id = node_lat.id;
-
-	const coord INVALID_COORD = UINT_MAX;
-	node->pos.x = INVALID_COORD;
-	node->pos.y = INVALID_COORD;
-
-	convert_latlon_to_pixel(node_lat.lat, node_lat.lon, &node->pos);
-
-	// uh oh
-	if (node->id == 0 || node->pos.x == INVALID_COORD || node->pos.y == INVALID_COORD) {
-		fprintf(err_stream, "bad node missing id/lat/lon\n");
-		return ERR_OSM;
-	}
+	visit_attributes(ctx->attr_start, node_visitor, node);
 
 	// single line
 	if (line_ends_with_close_tag(ctx)) {
@@ -709,8 +611,6 @@ static int parse_osm(struct osm_source *src, struct world *out) {
 
 		fclose(ctx.f);
 		ctx.f = NULL;
-
-		make_coords_relative(&ctx);
 	}
 
 	*out = ctx.out;

@@ -8,8 +8,8 @@ message World {
 }
 
 message Point {
-	uint32 x = 1;
-	uint32 y = 2;
+	double lat = 1;
+	double lon = 2;
 }
 
 enum RoadType {

@@ -10,27 +10,9 @@
  </node>
  <node id="298884272" lat="54.0901447" lon="12.2516513" user="SvenHRO" uid="46882" visible="true" version="1" changeset="676636" timestamp="2008-09-21T21:37:45Z"/>
  <node id="298884273" lat="54.0900459" lon="12.2518958" user="SvenHRO" uid="46882" visible="true" version="1" changeset="676636" timestamp="2008-09-21T21:37:46Z"/>
+
  <way id="26659127" user="Masch" uid="55988" visible="true" version="5" changeset="4142606" timestamp="2010-03-16T11:47:08Z">
   <nd ref="298884269"/>
   <nd ref="261728686"/>
   <tag k="highway" v="unclassified"/>
   <tag k="name" v="Pastower Straße"/>
- </way>
- <way id="50000">
-  <nd ref="298884272"/>
-  <nd ref="298884273"/>
-  <tag k="building" v="yes"/>
- </way>
- <relation id="56688" user="kmvar" uid="56190" visible="true" version="28" changeset="6947637" timestamp="2011-01-12T14:23:49Z">
-  <member type="node" ref="294942404" role=""/>
-  <member type="node" ref="364933006" role=""/>
-  <member type="way" ref="4579143" role=""/>
-  <member type="node" ref="249673494" role=""/>
-  <tag k="name" v="Küstenbus Linie 123"/>
-  <tag k="network" v="VVW"/>
-  <tag k="operator" v="Regionalverkehr Küste"/>
-  <tag k="ref" v="123"/>
-  <tag k="route" v="bus"/>
-  <tag k="type" v="route"/>
- </relation>
-</osm>

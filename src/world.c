@@ -37,7 +37,6 @@ void free_world(struct world *world) {
 }
 
 void debug_print(struct world *world) {
-	printf("World bounds: %d, %d\n", world->bounds[0], world->bounds[1]);
 	printf("%d roads:\n", world->roads.length);
 
 	int i = 0;
@@ -80,8 +79,8 @@ static bool encode_points(pb_ostream_t *stream, const pb_field_t *field, void * 
 	point point = {0};
 	vec_foreach(vec, point, i) {
 		Point p = Point_init_zero;
-		p.x = point.x;
-		p.y = point.y;
+		p.lat = point.lat;
+		p.lon = point.lon;
 
 		if (!pb_encode_tag_for_field(stream, field))
 			return false;
@@ -183,9 +182,6 @@ static bool encode_land_uses(pb_ostream_t *stream, const pb_field_t *field, void
 static bool dump_to_file_safe(struct world *world, FILE *file) {
 
 	World msg = World_init_zero;
-	msg.bounds_x = world->bounds[0];
-	msg.bounds_y = world->bounds[1];
-
 	msg.roads.funcs.encode = encode_roads;
 	msg.roads.arg = world;
 

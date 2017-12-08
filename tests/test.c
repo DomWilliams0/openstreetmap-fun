@@ -22,28 +22,17 @@ void test_roads() {
 	TEST_CHECK(r.segments.length == 2);
 
 	{
-		point cmp = {95, 18};
-		TEST_CHECK(r.segments.data[0].x == cmp.x && r.segments.data[0].y == cmp.y);
+		point cmp = {54.090175, 12.248263};
+		TEST_CHECK(r.segments.data[0].lat == cmp.lat && r.segments.data[0].lon == cmp.lon);
 	}
 	{
-		point cmp = {0, 0};
-		TEST_CHECK(r.segments.data[1].x == cmp.x && r.segments.data[1].y == cmp.y);
+		point cmp = {54.090631, 12.244192};
+		TEST_CHECK(r.segments.data[1].lat == cmp.lat && r.segments.data[1].lon == cmp.lon);
 	}
-	free_world(&w);
-}
-
-void test_bounds() {
-	struct world w;
-	TEST_CHECK(create_test_world(&w) == CRACKING);
-
-	TEST_CHECK(w.bounds[0] == 227);
-	TEST_CHECK(w.bounds[1] == 23);
-
 	free_world(&w);
 }
 
 TEST_LIST = {
-	{ "bounds", test_bounds },
 	{ "road discovery", test_roads },
 	{ NULL, NULL }
 };

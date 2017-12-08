@@ -67,11 +67,6 @@ struct road {
 	char *name;
 };
 
-struct building {
-	enum building_type type;
-	vec_point_t points;
-};
-
 struct land_use {
 	id id;
 	enum land_use_type type;
@@ -85,7 +80,6 @@ struct way {
 	enum way_type way_type;
 	union {
 		struct road road;
-		struct building building;
 		struct land_use land_use;
 	} que;
 };
