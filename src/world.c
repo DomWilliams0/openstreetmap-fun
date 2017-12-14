@@ -1,11 +1,11 @@
 #include <stdio.h>
 
-#include "pb_encode.h"
 #include "world.h"
 #include "error.h"
 #include "osm/osm.h"
 
 #ifndef NO_PROTOBUF
+#include "pb_encode.h"
 #include "world.pb.h"
 #endif
 
