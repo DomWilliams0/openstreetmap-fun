@@ -12,8 +12,6 @@
 #include "world.h"
 #include "parser.h"
 
-FILE *err_stream = NULL; // if NULL, defaults to stderr
-
 #define NODE_CMP(left, right) left->id != right->id
 #define NODE_HASH(entry) entry->id
 DECLARE_HASHMAP(node_map, NODE_CMP, NODE_HASH, free, realloc)
@@ -232,7 +230,7 @@ ATTR_VISITOR(node_visitor) {
 
 	if (strcmp(key, "id") == 0) {
 		if (!id_to_long(val, &((struct node *)data)->id)) {
-			fprintf(err_stream, "bad node id '%s'\n", val);
+			// fprintf(err_stream, "bad node id '%s'\n", val);
 			return;
 		}
 	}
@@ -282,7 +280,7 @@ ATTR_VISITOR(tag_visitor) {
 ATTR_VISITOR(node_ref_visitor) {
 	if (strcmp(key, "ref") == 0) {
 		if (!id_to_long(val, (id *)data)) {
-			fprintf(err_stream, "bad node ref id '%s'\n", val);
+			// fprintf(err_stream, "bad node ref id '%s'\n", val);
 			return;
 		}
 
@@ -290,7 +288,7 @@ ATTR_VISITOR(node_ref_visitor) {
 }
 int parse_node_ref_tag(struct parse_ctx *ctx) {
 	if (ctx->current_tag != TAG_WAY) {
-		fprintf(err_stream, "nd tag found inside non-way tag '%s'\n", tag_lookup[ctx->current_tag]);
+		// fprintf(err_stream, "nd tag found inside non-way tag '%s'\n", tag_lookup[ctx->current_tag]);
 		return ERR_OSM;
 	}
 
@@ -377,7 +375,7 @@ ATTR_VISITOR(way_visitor) {
 
 	if (strcmp(key, "id") == 0) {
 		if (!id_to_long(val, &((struct way *)data)->id)) {
-			fprintf(err_stream, "bad way id '%s'\n", val);
+			// fprintf(err_stream, "bad way id '%s'\n", val);
 			return;
 		}
 	}
@@ -429,7 +427,7 @@ static int add_node_points(struct parse_ctx *ctx, struct way *way, vec_point_t *
 		node.id = nid;
 		pnode = &node;
 		if (!node_mapFind(&ctx->nodes, &pnode)) {
-			fprintf(err_stream, "nonexistent node ref %ld\n", nid);
+			// fprintf(err_stream, "nonexistent node ref %ld\n", nid);
 			return ERR_OSM;
 		}
 
@@ -520,14 +518,14 @@ int parse_way_tag(struct parse_ctx *ctx, bool opening) {
 
 int parse_tag_tag(struct parse_ctx *ctx) {
 	if (ctx->current_tag != TAG_NODE && ctx->current_tag != TAG_WAY) {
-		fprintf(err_stream, "tag tag found inside non-node or way tag '%s'\n", tag_lookup[ctx->current_tag]);
+		// fprintf(err_stream, "tag tag found inside non-node or way tag '%s'\n", tag_lookup[ctx->current_tag]);
 		return ERR_OSM;
 	}
 
 	struct tag tag = {0};
 	visit_attributes(ctx->attr_start, tag_visitor, &tag);
 	if (tag.key == NULL || tag.val == NULL) {
-		fprintf(err_stream, "bad tag or memory error\n");
+		// fprintf(err_stream, "bad tag or memory error\n");
 		return ERR_OSM;
 	}
 
@@ -562,9 +560,6 @@ struct osm_source {
 };
 
 static int parse_osm(struct osm_source *src, struct world *out) {
-	if (err_stream == NULL)
-		err_stream = stderr;
-
 	struct parse_ctx ctx = {0};
 	ctx.current_tag = TAG_UNKNOWN;
 	init_world(&ctx.out);
@@ -585,17 +580,20 @@ static int parse_osm(struct osm_source *src, struct world *out) {
 			switch(tag.type) {
 				case TAG_NODE:
 					if ((ret = parse_node_tag(&ctx, tag.opening)) != CRACKING)
-						fprintf(err_stream, "error processing node: %s\n", error_get_message(ret));
+					{}
+						// fprintf(err_stream, "error processing node: %s\n", error_get_message(ret));
 					break;
 
 				case TAG_WAY:
 					if ((ret = parse_way_tag(&ctx, tag.opening)) != CRACKING)
-						fprintf(err_stream, "error processing way: %s\n", error_get_message(ret));
+					{}
+						// fprintf(err_stream, "error processing way: %s\n", error_get_message(ret));
 					break;
 
 				case TAG_NODE_REF:
 					if ((ret = parse_node_ref_tag(&ctx)) != CRACKING)
-						fprintf(err_stream, "error processing node ref: %s\n", error_get_message(ret));
+					{}
+						// fprintf(err_stream, "error processing node ref: %s\n", error_get_message(ret));
 					break;
 
 				case TAG_TAG:
